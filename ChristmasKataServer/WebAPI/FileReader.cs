@@ -9,7 +9,7 @@ namespace WebAPI
         {
             List<Person> people = new();
 
-            using (StreamReader r = new StreamReader("Data/sample-data.json"))
+            using (StreamReader r = new StreamReader("Data/validation-data.json"))
             {
                 string json = r.ReadToEnd();
                 people = JsonConvert.DeserializeObject<List<Person>>(json);

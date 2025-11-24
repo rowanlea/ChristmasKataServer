@@ -1,3 +1,7 @@
+using System;
+using WebAPI;
+using WebAPI.Model;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -16,11 +20,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/naughtyornice", () =>
+Determiner determiner = new();
+
+app.MapGet("/naughtyornice", (Person person) =>
+{
+    return determiner.DetermineNiceness(person);
+})
+.WithName("NaughtyOrNice")
+.WithOpenApi();
+
+app.MapGet("/score", (List<string = ID, bool = Nice> naughtyNiceList) =>
 {
     return false;
 })
-.WithName("NaughtyOrNice")
+.WithName("Score")
 .WithOpenApi();
 
 app.Run();

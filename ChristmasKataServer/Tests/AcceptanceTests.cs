@@ -12,16 +12,17 @@ namespace Tests
             TestHarness testHarness = new();
             Determiner determiner = new ();
             var people = FileReader.GetPeopleFromFile();
+
+            // Act
             foreach (var person in people)
             {
                 determiner.EnrichNiceness(person);
             }
 
-            // Act
-            var result = testHarness.VerifyResults(people);
+            var nicePeople = people.Where(p => p.Niceness == WebAPI.Model.Niceness.NICE);
 
             // Assert
-            result.Should().Be("You have found 20 people successfully");
+            nicePeople.Count().Should().Be(5000);
         }
     }
 }
