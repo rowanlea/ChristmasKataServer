@@ -5,9 +5,14 @@ using WebAPI.Requests;
 
 namespace WebAPI.Service;
 
+public interface IScoringService
+{
+    Task<Participant> Score(NaughtyNiceCandidateSubmissionRequest request);
+}
+
 public class ScoringService(
     IValidationResultReader validationResultReader,
-    IParticipantRepository participantRepository)
+    IParticipantRepository participantRepository) : IScoringService
 {
     public async Task<Participant> Score(NaughtyNiceCandidateSubmissionRequest request)
     {
