@@ -89,4 +89,22 @@ app.MapPost("/score", async (HttpContext context, NaughtyNiceCandidateSubmission
 .WithName("Score")
 .WithOpenApi();
 
+app.MapGet("/leaderboard", () =>
+    {
+        var participantRepository = app.Services.GetRequiredService<IParticipantRepository>();
+        var participants = participantRepository.GetAllParticipants();
+        
+        var leaderboard = participants.Select(p => new
+        {
+            TeamName = p.TeamName,
+            Score = p.GetParticipantScore()
+        })
+        .OrderByDescending(x => x.Score)
+        .ToList();
+        
+        return Results.Ok(leaderboard);
+    })
+.WithName("Leaderboard")
+.WithOpenApi();
+
 app.Run();

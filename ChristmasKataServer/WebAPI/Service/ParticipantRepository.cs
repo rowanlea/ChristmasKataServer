@@ -22,5 +22,10 @@ public class ParticipantRepository : IParticipantRepository
 
         return participant;
     }
+
+    public IEnumerable<Participant> GetAllParticipants()
+    {
+        return _participants.Values;
+    }
 }
 
