@@ -7,6 +7,7 @@ using WebAPI.Requests;
 using WebAPI.Service;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<IParticipantRepository, ParticipantRepository>();
 builder.Services.AddTransient<IScoringService, ScoringService>();
 
 // Add services to the container.
@@ -57,11 +58,17 @@ app.MapGet("/naughtyornice", (Person person) =>
 .WithOpenApi();
 
 //TODO validate tokens on each request
-app.MapPost("/score", async (NaughtyNiceCandidateSubmissionRequest request) =>
+app.MapPost("/score", async (HttpContext context, NaughtyNiceCandidateSubmissionRequest request) =>
     {
+        var teamName = context.Request.Headers["X-Team-Name"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(teamName))
+        {
+            return Results.BadRequest("X-Team-Name header is required");
+        }
         
         var scoringService = app.Services.GetRequiredService<IScoringService>();
-        return await scoringService.Score(request);
+        var result = await scoringService.Score(teamName, request);
+        return Results.Ok(result);
     })
     .RequireRateLimiting("naughtyornice")
 .WithName("Score")

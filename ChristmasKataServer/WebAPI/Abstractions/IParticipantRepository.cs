@@ -2,5 +2,5 @@ namespace WebAPI.Service;
 
 public interface IParticipantRepository
 {
-    Participant GetParticipantScore();
+    Participant GetParticipantScore(string teamName);
 }
