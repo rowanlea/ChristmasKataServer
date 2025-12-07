@@ -9,7 +9,7 @@ Server for LSCC Dec 2025
 - UI endpoint, with throttling status
 - scoring endpoint
 - 5 minutes grace time for sending team names
-- Reject existing team name if secret doesn't match
+- Participant repository should just return the participant, and this should be done at the start of the API call for re-use
 
 Auth headers:
 "X-Team-Name": team_name,

@@ -57,7 +57,6 @@ app.MapGet("/naughtyornice", (Person person) =>
 .WithName("NaughtyOrNice")
 .WithOpenApi();
 
-//TODO validate tokens on each request
 app.MapPost("/score", async (HttpContext context, NaughtyNiceCandidateSubmissionRequest request) =>
     {
         var teamName = context.Request.Headers["X-Team-Name"].FirstOrDefault();
@@ -66,9 +65,25 @@ app.MapPost("/score", async (HttpContext context, NaughtyNiceCandidateSubmission
             return Results.BadRequest("X-Team-Name header is required");
         }
         
-        var scoringService = app.Services.GetRequiredService<IScoringService>();
-        var result = await scoringService.Score(teamName, request);
-        return Results.Ok(result);
+        var teamSecret = context.Request.Headers["X-Unique-Key"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(teamSecret))
+        {
+            return Results.BadRequest("X-Unique-Key header is required");
+        }
+        
+        try
+        {
+            var scoringService = app.Services.GetRequiredService<IScoringService>();
+            var result = await scoringService.Score(teamName, teamSecret, request);
+            return Results.Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                detail: ex.Message
+            );
+        }
     })
     .RequireRateLimiting("naughtyornice")
 .WithName("Score")

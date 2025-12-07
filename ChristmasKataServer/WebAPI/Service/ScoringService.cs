@@ -7,14 +7,14 @@ namespace WebAPI.Service;
 
 public interface IScoringService
 {
-    Task<Participant> Score(string teamName, NaughtyNiceCandidateSubmissionRequest request);
+    Task<Participant> Score(string teamName, string teamSecret, NaughtyNiceCandidateSubmissionRequest request);
 }
 
 public class ScoringService(
     IValidationResultReader validationResultReader,
     IParticipantRepository participantRepository) : IScoringService
 {
-    public async Task<Participant> Score(string teamName, NaughtyNiceCandidateSubmissionRequest request)
+    public async Task<Participant> Score(string teamName, string teamSecret, NaughtyNiceCandidateSubmissionRequest request)
     {
         var validationDataDictionary =
             (await validationResultReader.GetValidationResults())
@@ -26,11 +26,11 @@ public class ScoringService(
             x.NaughtOrNice.Equals(naughtyOrNice)).Select(x => x.Id)
             .ToList();
 
-        var retrievedParticipantScore = participantRepository.GetParticipantScore(teamName);
-        retrievedParticipantScore.AddMatchingResultIds(matchingResultIds);
+        var participant = participantRepository.TryGetOrCreateParticipant(teamName, teamSecret);
+        participant.AddMatchingResultIds(matchingResultIds);
             //update the repo to save the entities
         
-        return retrievedParticipantScore;
+        return participant;
         
         //check the validationResultsByIds against what the candiate has submitted and return them
     }

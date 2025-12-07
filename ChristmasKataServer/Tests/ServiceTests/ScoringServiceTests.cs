@@ -22,7 +22,7 @@ public class ScoringServiceTests
             validatedNaughtyOrNicePerson
         });
         var participantRepository = Substitute.For<IParticipantRepository>();
-        participantRepository.GetParticipantScore(Arg.Any<string>()).Returns(new Participant());
+        participantRepository.TryGetOrCreateParticipant(Arg.Any<string>(), Arg.Any<string>()).Returns(new Participant());
         
         var service = new ScoringService(validationResultReader,  participantRepository);
 
@@ -31,7 +31,7 @@ public class ScoringServiceTests
             new NaughtyNiceCandidateRequest("1", Niceness.NICE)
         });
         
-        var result = await service.Score("TestTeam", request);
+        var result = await service.Score("TestTeam", "TestSecret", request);
 
         var participantScore = new Participant();
         participantScore.AddMatchingResultIds(["1"]);
@@ -62,7 +62,7 @@ public class ScoringServiceTests
         };
         retrievedParticipantScore.CorrectIds.Add("1");
         
-        participantRepository.GetParticipantScore(Arg.Any<string>()).Returns(retrievedParticipantScore);
+        participantRepository.TryGetOrCreateParticipant(Arg.Any<string>(), Arg.Any<string>()).Returns(retrievedParticipantScore);
         
         var service = new ScoringService(validationResultReader,  participantRepository);
         
@@ -71,9 +71,9 @@ public class ScoringServiceTests
             new("1", Niceness.NICE)
         });
 
-        var result = await service.Score("TestTeam", request);
+        var result = await service.Score("TestTeam", "TestSecret", request);
 
-        result.currentScore.Should().Be(1);
+        result.GetParticipantScore().Should().Be(1);
         result.CorrectIds.Should().BeEquivalentTo(["1"]);
 
     }

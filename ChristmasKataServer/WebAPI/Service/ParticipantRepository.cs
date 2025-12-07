@@ -6,13 +6,21 @@ public class ParticipantRepository : IParticipantRepository
 {
     private readonly ConcurrentDictionary<string, Participant> _participants = new();
 
-    public Participant GetParticipantScore(string teamName)
+    public Participant TryGetOrCreateParticipant(string teamName, string secret)
     {
-        return _participants.GetOrAdd(teamName, _ => new Participant
+        var participant = _participants.GetOrAdd(teamName, _ => new Participant
         {
             TeamName = teamName,
-            UserSecret = string.Empty
+            UserSecret = secret
         });
+
+        // Validate the secret matches (whether newly created or existing)
+        if (participant.UserSecret != secret)
+        {
+            throw new UnauthorizedAccessException("Team name exists but secret does not match");
+        }
+
+        return participant;
     }
 }
 
