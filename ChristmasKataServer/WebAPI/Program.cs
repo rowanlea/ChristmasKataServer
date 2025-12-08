@@ -11,7 +11,7 @@ using WebAPI.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IParticipantRepository, ParticipantRepository>();
-builder.Services.AddTransient<IValidationResultReader, FakeValidationResultReader>();
+builder.Services.AddTransient<IValidationResultReader, ValidationResultReader>();
 builder.Services.AddTransient<IScoringService, ScoringService>();
 
 // Add services to the container.
@@ -54,10 +54,7 @@ app.UseHttpsRedirection();
 
 Determiner determiner = new();
 
-app.MapGet("/naughtyornice", ([FromBody] Person person) =>
-{
-    return determiner.DetermineNiceness(person);
-})
+app.MapGet("/naughtyornice", ([FromBody] Person person) => determiner.DetermineNiceness(person))
 .WithName("NaughtyOrNice")
 .WithOpenApi();
 

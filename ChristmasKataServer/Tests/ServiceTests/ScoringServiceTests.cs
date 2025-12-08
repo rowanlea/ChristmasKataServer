@@ -14,7 +14,7 @@ public class ScoringServiceTests
         var validationResultReader = Substitute.For<IValidationResultReader>();
         var validatedNaughtyOrNicePerson = new ValidatedNaughtyOrNicePerson()
         {
-            Id = "1",
+            Id = 1,
             NaughtyOrNice = Niceness.NICE
         };
         validationResultReader.GetValidationResults().Returns(new List<ValidatedNaughtyOrNicePerson>()
@@ -28,13 +28,13 @@ public class ScoringServiceTests
 
         var request = new NaughtyNiceCandidateSubmissionRequest("userId", new List<NaughtyNiceCandidateRequest>()
         {
-            new NaughtyNiceCandidateRequest("1", Niceness.NICE)
+            new NaughtyNiceCandidateRequest(1, Niceness.NICE)
         });
         
         var result = await service.Score("TestTeam", "TestSecret", request);
 
         var participantScore = new Participant();
-        participantScore.AddMatchingResultIds(["1"]);
+        participantScore.AddMatchingResultIds([1]);
         
         result.Should().BeEquivalentTo(participantScore);
     }
@@ -48,7 +48,7 @@ public class ScoringServiceTests
         var validationResultReader = Substitute.For<IValidationResultReader>();
         var validatedNaughtyOrNicePerson = new ValidatedNaughtyOrNicePerson()
         {
-            Id = "1",
+            Id = 1,
             NaughtyOrNice = Niceness.NICE
         };
         
@@ -60,7 +60,7 @@ public class ScoringServiceTests
         {
             UserSecret = "UserId",
         };
-        retrievedParticipantScore.CorrectIds.Add("1");
+        retrievedParticipantScore.CorrectIds.Add(1);
         
         participantRepository.TryGetOrCreateParticipant(Arg.Any<string>(), Arg.Any<string>()).Returns(retrievedParticipantScore);
         
@@ -68,13 +68,13 @@ public class ScoringServiceTests
         
         var request = new NaughtyNiceCandidateSubmissionRequest("userId", new List<NaughtyNiceCandidateRequest>()
         {
-            new("1", Niceness.NICE)
+            new(1, Niceness.NICE)
         });
 
         var result = await service.Score("TestTeam", "TestSecret", request);
 
         result.GetParticipantScore().Should().Be(1);
-        result.CorrectIds.Should().BeEquivalentTo(["1"]);
+        result.CorrectIds.Should().BeEquivalentTo([1]);
 
     }
 }

@@ -4,6 +4,6 @@ namespace WebAPI.Service;
 
 public class ValidatedNaughtyOrNicePerson
 {
-    public string Id { get; set; }
+    public int Id { get; set; }
     public Niceness NaughtyOrNice { get; set; }
 }
