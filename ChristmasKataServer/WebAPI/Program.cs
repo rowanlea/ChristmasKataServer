@@ -37,8 +37,6 @@ builder.Services.AddRateLimiter(limiter =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-
 var app = builder.Build();
 
 app.UseMiddleware<AuthenticationMiddleware>();
