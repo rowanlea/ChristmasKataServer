@@ -8,10 +8,10 @@ public class CosmosDbClient : ICosmosDbClient
     public CosmosDbClient()
     {
         CosmosClient cosmosClient = new CosmosClient(
-            "http://localhost:8081", 
+            "https://localhost:8081", 
             "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
 
-        var db = cosmosClient.GetDatabase("ChristmasSpecialKata");
+        var db = cosmosClient.GetDatabase("ChristmasKataServer");
         
         _container = db.GetContainer("participants");
     }

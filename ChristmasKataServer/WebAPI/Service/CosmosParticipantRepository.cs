@@ -24,28 +24,18 @@ public class CosmosParticipantRepository : IParticipantRepository
 
     public async Task<Participant?> GetParticipantBy(string teamName)
     {
-        try
+        var queryDefinition = new QueryDefinition(
+            "SELECT * FROM c WHERE c.teamName = @teamName")
+            .WithParameter("@teamName", teamName);
+        var result = _container.GetItemQueryIterator<Participant>(queryDefinition);
+        
+        var results = new List<Participant>();
+        while (result.HasMoreResults)
         {
-            var userSecret = $"{teamName}-secret-${RandomNumberGenerator.GetInt32(1000, 9999)}";
-            var p = new Participant
-            {
-                Id = teamName,
-                TeamName = teamName,
-                UserSecret = userSecret,
-            };
-
-            var result = await _container.UpsertItemAsync<Participant>(p);
-
-        }
-        catch (Exception ex)
-        {
-            var e = ex; 
+            results.AddRange(await result.ReadNextAsync());
         }
 
-        // var participant = await _container.ReadItemAsync<Participant>(id: teamName, new PartitionKey(teamName));
-        // return  participant?.Resource ?? null; 
-
-        return null;
+        return results.FirstOrDefault();
     }
 
     public async Task<string> Create(string teamName)
