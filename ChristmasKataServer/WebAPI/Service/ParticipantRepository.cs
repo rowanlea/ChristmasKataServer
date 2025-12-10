@@ -29,13 +29,13 @@ public class ParticipantRepository : IParticipantRepository
         return _participants.Values;
     }
 
-    public Participant? GetParticipantBy(string teamName)
+    public Task<Participant?> GetParticipantBy(string teamName)
     {
         _participants.TryGetValue(teamName, out var participant);
-        return participant;
+        return Task.FromResult(participant);
     }
 
-    public string Create(string teamName)
+    public Task<string> Create(string teamName)
     {
         var userSecret = $"{teamName}-secret-${RandomNumberGenerator.GetInt32(1000, 9999)}";
         var isSuccessful = _participants.TryAdd(teamName, new Participant
@@ -44,18 +44,24 @@ public class ParticipantRepository : IParticipantRepository
             UserSecret = userSecret,
         });
 
-        return isSuccessful ? userSecret : string.Empty;
+        return Task.FromResult(isSuccessful ? userSecret : string.Empty);
     }
 
-    public Task<bool> ParticipantExists(string teamName, string teamSecret)
+    public bool ParticipantExists(string teamName, string teamSecret)
     {
         var teamExists = _participants.TryGetValue(teamName, out var participant);
         if (!teamExists)
         {
-            return Task.FromResult(false);
+            return false;
         }
         
-        return participant!.UserSecret == teamSecret ?  Task.FromResult(true) : Task.FromResult(false);
+        return participant!.UserSecret == teamSecret ?  true : false;
+    }
+
+    public Task UpdateParticipantScore(Participant participant)
+    {
+        _participants[participant.TeamName] = participant;
+        return Task.CompletedTask;
     }
 }
 

@@ -8,6 +8,8 @@ namespace Tests.ServiceTests;
 
 public class ScoringServiceTests
 {
+    private const string TeamName = "TestTeam";
+
     [Test]
     public async Task  GivenParticipantIsSubmittingScoreForTheFirstTime_AddScore()
     {
@@ -22,26 +24,23 @@ public class ScoringServiceTests
             validatedNaughtyOrNicePerson
         });
         var participantRepository = Substitute.For<IParticipantRepository>();
-        participantRepository.TryGetOrCreateParticipant(Arg.Any<string>(), Arg.Any<string>()).Returns(new Participant());
+        participantRepository.GetParticipantBy(Arg.Any<string>()).Returns(new Participant()
+        {
+            TeamName = TeamName,
+        });
         
         var service = new ScoringService(validationResultReader,  participantRepository);
 
-        var request = new NaughtyNiceCandidateSubmissionRequest("userId", new List<NaughtyNiceCandidateRequest>()
+        var request = new NaughtyNiceCandidateSubmissionRequest(new List<NaughtyNiceCandidateRequest>()
         {
             new NaughtyNiceCandidateRequest(1, Niceness.NICE)
         });
         
-        var result = await service.Score("TestTeam", "TestSecret", request);
-
-        var participantScore = new Participant();
-        participantScore.AddMatchingResultIds([1]);
+        var result = await service.Score(TeamName, "TestSecret", request);
         
-        result.Should().BeEquivalentTo(participantScore);
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
     }
     
-    //create paramtertised test
-
-
     [Test]
     public async Task GivenParticipantIsSubmittingResultsWhichTheyAlreadyHaveScoresFor_ScoreIsNotUpdatedForParticipant()
     {
@@ -58,23 +57,178 @@ public class ScoringServiceTests
         var participantRepository = Substitute.For<IParticipantRepository>();
         var retrievedParticipantScore = new Participant()
         {
-            UserSecret = "UserId",
+            TeamName = TeamName,
         };
-        retrievedParticipantScore.CorrectIds.Add(1);
         
-        participantRepository.TryGetOrCreateParticipant(Arg.Any<string>(), Arg.Any<string>()).Returns(retrievedParticipantScore);
+        participantRepository.GetParticipantBy(Arg.Any<string>()).Returns(retrievedParticipantScore);
         
         var service = new ScoringService(validationResultReader,  participantRepository);
         
-        var request = new NaughtyNiceCandidateSubmissionRequest("userId", new List<NaughtyNiceCandidateRequest>()
+        var request = new NaughtyNiceCandidateSubmissionRequest([new(1, Niceness.NICE)]);
+
+        var result = await service.Score(TeamName, "TestSecret", request);
+
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
+    }
+
+    [Test]
+    public async Task GivenUserIsSubmittingTwoOfTheSameValidationData_ItFiltersOutDuplicateToPreventAddingTheScores()
+    {
+        var validationResultReader = Substitute.For<IValidationResultReader>();
+        var validatedNaughtyOrNicePerson = new ValidatedNaughtyOrNicePerson()
         {
-            new(1, Niceness.NICE)
-        });
+            Id = 1,
+            NaughtyOrNice = Niceness.NICE
+        };
+        
+        validationResultReader.GetValidationResults().Returns(
+            [validatedNaughtyOrNicePerson]);
+        
+        var participantRepository = Substitute.For<IParticipantRepository>();
+        var retrievedParticipantScore = new Participant()
+        {
+            TeamName = TeamName,
+        };
+        
+        participantRepository.GetParticipantBy(Arg.Any<string>()).Returns(retrievedParticipantScore);
+        
+        var service = new ScoringService(validationResultReader,  participantRepository);
+        
+        var request = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NICE), 
+            new(1, Niceness.NICE)]);
 
-        var result = await service.Score("TestTeam", "TestSecret", request);
+        var result = await service.Score(TeamName, "TestSecret", request);
 
-        result.GetParticipantScore().Should().Be(1);
-        result.CorrectIds.Should().BeEquivalentTo([1]);
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
+    }
 
+    [Test]
+    public async Task GivenUserIsSubmitsDataAndGetsAPoint_AndThenSubmitsAgainAndIsWrongScoreDoesNotChange()
+    {
+        var validationResultReader = Substitute.For<IValidationResultReader>();
+        var validatedNaughtyOrNicePerson = new ValidatedNaughtyOrNicePerson()
+        {
+            Id = 1,
+            NaughtyOrNice = Niceness.NICE
+        };
+        
+        validationResultReader.GetValidationResults().Returns(
+            [validatedNaughtyOrNicePerson]);
+        
+        var participantRepository = Substitute.For<IParticipantRepository>();
+        var retrievedParticipantScore = new Participant()
+        {
+            TeamName = TeamName,
+        };
+        
+        participantRepository.GetParticipantBy(Arg.Any<string>()).Returns(retrievedParticipantScore);
+        
+        var service = new ScoringService(validationResultReader,  participantRepository);
+        
+        var request = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NICE)]);
+        
+        var result = await service.Score(TeamName, "TestSecret", request);
+
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
+        
+        var requestSubmittingWithIncorrectData = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NAUGHTY)]);
+        await service.Score(TeamName, "TestSecret", requestSubmittingWithIncorrectData);
+        
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
+        
+    }
+
+    [Test]
+    public async Task Test()
+    {
+        var validationResultReader = Substitute.For<IValidationResultReader>();
+        var validatedNaughtyOrNicePerson = new ValidatedNaughtyOrNicePerson()
+        {
+            Id = 1,
+            NaughtyOrNice = Niceness.NICE
+        };
+        var secondValidatedNaughtOrNice = new ValidatedNaughtyOrNicePerson()
+        {
+            Id = 2,
+            NaughtyOrNice = Niceness.NAUGHTY
+        };
+        
+        validationResultReader.GetValidationResults().Returns(
+            [validatedNaughtyOrNicePerson, secondValidatedNaughtOrNice]);
+        
+        var participantRepository = Substitute.For<IParticipantRepository>();
+        var retrievedParticipantScore = new Participant
+        {
+            TeamName = TeamName,
+        };
+        
+        participantRepository.GetParticipantBy(TeamName).Returns(_ => retrievedParticipantScore);
+        
+        var service = new ScoringService(validationResultReader,  participantRepository);
+        
+        var request = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NICE)]);
+        
+        var result = await service.Score(TeamName, "TestSecret", request);
+        
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
+        
+        var requestWithAdditionalData = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NICE),
+            new (2, Niceness.NAUGHTY)
+        ]);
+        
+       var finalResult =  await service.Score(TeamName, "TestSecret", requestWithAdditionalData);
+        
+        finalResult.Should().BeEquivalentTo(new ParticipantScore(2, [1, 2]));
+
+    }
+
+    [Test]
+    public async Task Test2()
+    {
+        var validationResultReader = Substitute.For<IValidationResultReader>();
+        var validatedNaughtyOrNicePerson = new ValidatedNaughtyOrNicePerson()
+        {
+            Id = 1,
+            NaughtyOrNice = Niceness.NICE
+        };
+        var secondValidatedNaughtOrNice = new ValidatedNaughtyOrNicePerson()
+        {
+            Id = 2,
+            NaughtyOrNice = Niceness.NAUGHTY
+        };
+        
+        validationResultReader.GetValidationResults().Returns(
+            [validatedNaughtyOrNicePerson, secondValidatedNaughtOrNice]);
+        
+        var participantRepository = Substitute.For<IParticipantRepository>();
+        var retrievedParticipantScore = new Participant
+        {
+            TeamName = TeamName,
+        };
+        
+        participantRepository.GetParticipantBy(TeamName).Returns(_ => retrievedParticipantScore);
+        
+        var service = new ScoringService(validationResultReader,  participantRepository);
+        
+        var request = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NICE)]);
+        
+        var result = await service.Score(TeamName, "TestSecret", request);
+        
+        result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
+        
+        var requestWithAdditionalData = new NaughtyNiceCandidateSubmissionRequest([
+            new(1, Niceness.NAUGHTY),
+            new (2, Niceness.NAUGHTY)
+        ]);
+        
+        var finalResult =  await service.Score(TeamName, "TestSecret", requestWithAdditionalData);
+        
+        finalResult.Should().BeEquivalentTo(new ParticipantScore(1, [2]));
     }
 }

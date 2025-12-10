@@ -5,12 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WebAPI;
 using WebAPI.API;
+using WebAPI.Database;
 using WebAPI.Model;
 using WebAPI.Requests;
 using WebAPI.Service;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IParticipantRepository, ParticipantRepository>();
+builder.Services.AddSingleton<ICosmosDbClient, CosmosDbClient>();
+builder.Services.AddTransient<IParticipantRepository, CosmosParticipantRepository>();
 builder.Services.AddTransient<IValidationResultReader, ValidationResultReader>();
 builder.Services.AddTransient<IScoringService, ScoringService>();
 
@@ -28,7 +30,22 @@ builder.Services.AddRateLimiter(limiter =>
         
         return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10,
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0,
+        });
+    });
+
+    limiter.AddPolicy("score", context =>
+    {
+        var teamName = context.Request.Headers["X-Team-Name"].FirstOrDefault();
+        var teamSecret = context.Request.Headers["X-Unique-Key"].FirstOrDefault();
+        
+        var key = $"{teamName}:${teamSecret}";
+        
+        return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
             Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0,
         });
@@ -93,38 +110,38 @@ app.MapPost("/score", async (HttpContext context, [FromBody] NaughtyNiceCandidat
 .WithName("Score")
 .WithOpenApi();
 
-app.MapGet("/leaderboard", () =>
-    {
-        var participantRepository = app.Services.GetRequiredService<IParticipantRepository>();
-        var participants = participantRepository.GetAllParticipants();
-        
-        var leaderboard = participants.Select(p => new
-        {
-            TeamName = p.TeamName,
-            Score = p.GetParticipantScore()
-        })
-        .OrderByDescending(x => x.Score)
-        .ToList();
-        
-        return Results.Ok(leaderboard);
-    })
-.WithName("Leaderboard")
-.WithMetadata(new SkipTeamValidationAttribute())
-.WithOpenApi();
+// app.MapGet("/leaderboard", () =>
+//     {
+//         var participantRepository = app.Services.GetRequiredService<IParticipantRepository>();
+//         var participants = participantRepository.GetAllParticipants();
+//         
+//         var leaderboard = participants.Select(p => new
+//         {
+//             TeamName = p.TeamName,
+//             Score = p.Score()
+//         })
+//         .OrderByDescending(x => x.Score)
+//         .ToList();
+//         
+//         return Results.Ok(leaderboard);
+//     })
+// .WithName("Leaderboard")
+// .WithMetadata(new SkipTeamValidationAttribute())
+// .WithOpenApi();
 
 
-app.MapPost("/register", (HttpContext context, [FromBody] string teamName) =>
+app.MapGet("/register/{teamName}", async (HttpContext context, [FromRoute] string teamName) =>
 {
     var participantRepository = app.Services.GetRequiredService<IParticipantRepository>();
 
-    var participantIsAlreadyRegistered = participantRepository.GetParticipantBy(teamName) != null;
+    var participantIsAlreadyRegistered = await participantRepository.GetParticipantBy(teamName) != null;
 
     if (participantIsAlreadyRegistered)
     {
         return Results.BadRequest("Team name already exists");
     }
 
-    var result = participantRepository.Create(teamName);
+    var result = await participantRepository.Create(teamName);
     return Results.Ok(result);
 })
 .WithName("Register")

@@ -1,16 +1,24 @@
+using Newtonsoft.Json;
+
 namespace WebAPI.Service;
 
 public record Participant
 {
+    [JsonProperty(PropertyName = "id")]
+    public string Id { get; set; }
+
+    [JsonProperty(PropertyName = "teamName")]
     public string TeamName { get; set; }
+
     public string UserSecret { get; set; }
-    public List<int> CorrectIds { get; protected set; } = new();
+
+    public int Score { get; set; }
     
-    public int GetParticipantScore() => CorrectIds.Count;
-    
-    public void AddMatchingResultIds(List<int> matchingResultIds)
+    public void UpdateHighScore(int score)
     {
-        var resultsToAdd = matchingResultIds.Where(x => !CorrectIds.Contains(x));
-        CorrectIds.AddRange(resultsToAdd);
+        if (score > Score)
+        {
+            Score = score; 
+        }
     }
 }
