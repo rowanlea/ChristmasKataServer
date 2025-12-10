@@ -47,15 +47,15 @@ public class ParticipantRepository : IParticipantRepository
         return Task.FromResult(isSuccessful ? userSecret : string.Empty);
     }
 
-    public bool ParticipantExists(string teamName, string teamSecret)
+    public Task<bool> ParticipantExists(string teamName, string teamSecret)
     {
         var teamExists = _participants.TryGetValue(teamName, out var participant);
         if (!teamExists)
         {
-            return false;
+            return Task.FromResult(false);
         }
         
-        return participant!.UserSecret == teamSecret ?  true : false;
+        return Task.FromResult(participant!.UserSecret == teamSecret);
     }
 
     public Task UpdateParticipantScore(Participant participant)

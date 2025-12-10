@@ -6,6 +6,6 @@ public interface IParticipantRepository
     IEnumerable<Participant> GetAllParticipants();
     Task<Participant?> GetParticipantBy(string teamName);
     Task<string> Create(string teamName);
-    bool ParticipantExists(string teamName, string teamSecret);
+    Task<bool> ParticipantExists(string teamName, string teamSecret);
     Task UpdateParticipantScore(Participant participant);
 }

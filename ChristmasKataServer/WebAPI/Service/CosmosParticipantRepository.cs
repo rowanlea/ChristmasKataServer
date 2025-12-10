@@ -52,12 +52,10 @@ public class CosmosParticipantRepository : IParticipantRepository
         return result.Resource.UserSecret;
     }
 
-    public bool ParticipantExists(string teamName, string teamSecret)
+    public async Task<bool> ParticipantExists(string teamName, string teamSecret)
     {
-        var participant = _container.GetItemLinqQueryable<Participant>()
-            .FirstOrDefault(x => x.TeamName == teamName && x.UserSecret == teamSecret);
-
-        return participant != null;
+        var participant = await GetParticipantBy(teamName);
+        return participant != null && participant.UserSecret == teamSecret;
     }
 
     public async Task UpdateParticipantScore(Participant participant)

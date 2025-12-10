@@ -8,14 +8,14 @@ namespace WebAPI.Service;
 
 public interface IScoringService
 {
-    Task<ParticipantScore> Score(string teamName, string teamSecret, NaughtyNiceCandidateSubmissionRequest request);
+    Task<ParticipantScore> Score(string teamName, NaughtyNiceCandidateSubmissionRequest request);
 }
 
 public class ScoringService(
     IValidationResultReader validationResultReader,
     IParticipantRepository participantRepository) : IScoringService
 {
-    public async Task<ParticipantScore> Score(string teamName, string teamSecret,
+    public async Task<ParticipantScore> Score(string teamName,
         NaughtyNiceCandidateSubmissionRequest request)
     {
         var validationDataDictionary =
@@ -24,9 +24,8 @@ public class ScoringService(
 
 
         var matchingResultIds = request.NaughtyNiceCandidateRequests
-            .Where(x =>
-                validationDataDictionary.TryGetValue(x.Id, out var naughtyOrNice) &&
-                (x.NaughtOrNice == naughtyOrNice))
+            .Where(x => validationDataDictionary.TryGetValue(x.Id, out var naughtyOrNice) &&
+                        (x.NaughtyOrNice == naughtyOrNice))
             .DistinctBy(x => x.Id)
             .Select(x => x.Id)
             .ToList();

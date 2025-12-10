@@ -31,7 +31,7 @@ public class AuthenticationMiddleware
             return;
         }
 
-        var exists =  repository.ParticipantExists(teamName, teamSecret);
+        var exists =  await repository.ParticipantExists(teamName, teamSecret);
 
         if (!exists)
         {

@@ -36,7 +36,7 @@ public class ScoringServiceTests
             new NaughtyNiceCandidateRequest(1, Niceness.NICE)
         });
         
-        var result = await service.Score(TeamName, "TestSecret", request);
+        var result = await service.Score(TeamName, request);
         
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
     }
@@ -66,7 +66,7 @@ public class ScoringServiceTests
         
         var request = new NaughtyNiceCandidateSubmissionRequest([new(1, Niceness.NICE)]);
 
-        var result = await service.Score(TeamName, "TestSecret", request);
+        var result = await service.Score(TeamName, request);
 
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
     }
@@ -98,7 +98,7 @@ public class ScoringServiceTests
             new(1, Niceness.NICE), 
             new(1, Niceness.NICE)]);
 
-        var result = await service.Score(TeamName, "TestSecret", request);
+        var result = await service.Score(TeamName, request);
 
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
     }
@@ -129,13 +129,13 @@ public class ScoringServiceTests
         var request = new NaughtyNiceCandidateSubmissionRequest([
             new(1, Niceness.NICE)]);
         
-        var result = await service.Score(TeamName, "TestSecret", request);
+        var result = await service.Score(TeamName, request);
 
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
         
         var requestSubmittingWithIncorrectData = new NaughtyNiceCandidateSubmissionRequest([
             new(1, Niceness.NAUGHTY)]);
-        await service.Score(TeamName, "TestSecret", requestSubmittingWithIncorrectData);
+        await service.Score(TeamName, requestSubmittingWithIncorrectData);
         
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
         
@@ -172,7 +172,7 @@ public class ScoringServiceTests
         var request = new NaughtyNiceCandidateSubmissionRequest([
             new(1, Niceness.NICE)]);
         
-        var result = await service.Score(TeamName, "TestSecret", request);
+        var result = await service.Score(TeamName, request);
         
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
         
@@ -181,7 +181,7 @@ public class ScoringServiceTests
             new (2, Niceness.NAUGHTY)
         ]);
         
-       var finalResult =  await service.Score(TeamName, "TestSecret", requestWithAdditionalData);
+       var finalResult =  await service.Score(TeamName, requestWithAdditionalData);
         
         finalResult.Should().BeEquivalentTo(new ParticipantScore(2, [1, 2]));
 
@@ -218,7 +218,7 @@ public class ScoringServiceTests
         var request = new NaughtyNiceCandidateSubmissionRequest([
             new(1, Niceness.NICE)]);
         
-        var result = await service.Score(TeamName, "TestSecret", request);
+        var result = await service.Score(TeamName, request);
         
         result.Should().BeEquivalentTo(new ParticipantScore(1, [1]));
         
@@ -227,7 +227,7 @@ public class ScoringServiceTests
             new (2, Niceness.NAUGHTY)
         ]);
         
-        var finalResult =  await service.Score(TeamName, "TestSecret", requestWithAdditionalData);
+        var finalResult =  await service.Score(TeamName, requestWithAdditionalData);
         
         finalResult.Should().BeEquivalentTo(new ParticipantScore(1, [2]));
     }

@@ -1,4 +1,6 @@
 using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +13,12 @@ using WebAPI.Requests;
 using WebAPI.Service;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.WriteIndented = true;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddSingleton<ICosmosDbClient, CosmosDbClient>();
 builder.Services.AddTransient<IParticipantRepository, CosmosParticipantRepository>();
 builder.Services.AddTransient<IValidationResultReader, ValidationResultReader>();
@@ -81,30 +89,10 @@ app.MapGet("trysmashingurl", () =>
 app.MapPost("/score", async (HttpContext context, [FromBody] NaughtyNiceCandidateSubmissionRequest request) =>
     {
         var teamName = context.Request.Headers["X-Team-Name"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(teamName))
-        {
-            return Results.BadRequest("X-Team-Name header is required");
-        }
         
-        var teamSecret = context.Request.Headers["X-Unique-Key"].FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(teamSecret))
-        {
-            return Results.BadRequest("X-Unique-Key header is required");
-        }
-        
-        try
-        {
-            var scoringService = app.Services.GetRequiredService<IScoringService>();
-            var result = await scoringService.Score(teamName, teamSecret, request);
-            return Results.Ok(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Results.Problem(
-                statusCode: StatusCodes.Status401Unauthorized,
-                detail: ex.Message
-            );
-        }
+        var scoringService = app.Services.GetRequiredService<IScoringService>();
+        var result = await scoringService.Score(teamName!, request);
+        return Results.Ok(result);
     })
 .RequireRateLimiting("naughtyornice")
 .WithName("Score")
