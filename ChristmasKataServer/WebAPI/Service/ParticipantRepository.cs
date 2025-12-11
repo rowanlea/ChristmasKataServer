@@ -24,9 +24,9 @@ public class ParticipantRepository : IParticipantRepository
         return participant;
     }
 
-    public IEnumerable<Participant> GetAllParticipants()
+    public Task<IEnumerable<Participant>> GetAllParticipants()
     {
-        return _participants.Values;
+        return Task.FromResult(new List<Participant>().AsEnumerable());
     }
 
     public Task<Participant?> GetParticipantBy(string teamName)

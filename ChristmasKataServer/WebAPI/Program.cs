@@ -1,10 +1,7 @@
-using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using WebAPI;
 using WebAPI.API;
 using WebAPI.Database;
@@ -53,7 +50,7 @@ builder.Services.AddRateLimiter(limiter =>
         
         return RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 20,
+            PermitLimit = 3,
             Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0,
         });
@@ -66,12 +63,6 @@ var app = builder.Build();
 
 app.UseMiddleware<AuthenticationMiddleware>();
 app.UseRateLimiter();
-// Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-//     app.UseSwagger();
-//     app.UseSwaggerUI();
-// }
 
 app.UseHttpsRedirection();
 
@@ -79,12 +70,9 @@ Determiner determiner = new();
 
 app.MapGet("/naughtyornice", ([FromBody] Person person) => determiner.DetermineNiceness(person))
 .WithName("NaughtyOrNice")
+.RequireRateLimiting("naughtyornice")
 .WithOpenApi();
 
-app.MapGet("trysmashingurl", () =>
-{
-    return Results.Ok("Hello World!");
-}).RequireRateLimiting("naughtyornice");
 
 app.MapPost("/score", async (HttpContext context, [FromBody] NaughtyNiceCandidateSubmissionRequest request) =>
     {
@@ -94,28 +82,26 @@ app.MapPost("/score", async (HttpContext context, [FromBody] NaughtyNiceCandidat
         var result = await scoringService.Score(teamName!, request);
         return Results.Ok(result);
     })
-.RequireRateLimiting("naughtyornice")
+.RequireRateLimiting("score")
 .WithName("Score")
 .WithOpenApi();
 
-// app.MapGet("/leaderboard", () =>
-//     {
-//         var participantRepository = app.Services.GetRequiredService<IParticipantRepository>();
-//         var participants = participantRepository.GetAllParticipants();
-//         
-//         var leaderboard = participants.Select(p => new
-//         {
-//             TeamName = p.TeamName,
-//             Score = p.Score()
-//         })
-//         .OrderByDescending(x => x.Score)
-//         .ToList();
-//         
-//         return Results.Ok(leaderboard);
-//     })
-// .WithName("Leaderboard")
-// .WithMetadata(new SkipTeamValidationAttribute())
-// .WithOpenApi();
+app.MapGet("/leaderboard", async () =>
+    {
+        var participantRepository = app.Services.GetRequiredService<IParticipantRepository>();
+        var participants = await participantRepository.GetAllParticipants();
+        var leaderboard = participants.Select(x => new
+                {
+                    TeamName = x.TeamName,
+                    Score = x.Score
+                })
+        .OrderByDescending(x => x.Score)
+        .ToList();
+        return Results.Ok(leaderboard);
+    })
+.WithName("Leaderboard")
+.WithMetadata(new SkipTeamValidationAttribute())
+.WithOpenApi();
 
 
 app.MapGet("/register/{teamName}", async (HttpContext context, [FromRoute] string teamName) =>

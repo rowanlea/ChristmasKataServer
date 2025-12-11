@@ -17,9 +17,18 @@ public class CosmosParticipantRepository : IParticipantRepository
         throw new NotImplementedException();
     }
 
-    public IEnumerable<Participant> GetAllParticipants()
+    public async Task<IEnumerable<Participant>> GetAllParticipants()
     {
-        throw new NotImplementedException();
+        var queryDefinition = new QueryDefinition("SELECT * FROM c");
+        var result = _container.GetItemQueryIterator<Participant>(queryDefinition);
+        
+        var results = new List<Participant>();
+        while (result.HasMoreResults)
+        {
+            results.AddRange(await result.ReadNextAsync());
+        }
+
+        return results;
     }
 
     public async Task<Participant?> GetParticipantBy(string teamName)
