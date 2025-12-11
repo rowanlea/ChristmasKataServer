@@ -5,11 +5,10 @@ namespace WebAPI.Database;
 public class CosmosDbClient : ICosmosDbClient
 {
     readonly Container _container;
-    public CosmosDbClient()
+    public CosmosDbClient(IConfiguration configuration)
     {
         CosmosClient cosmosClient = new CosmosClient(
-            "https://localhost:8081", 
-            "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==");
+            configuration["accountEndpoint"], configuration["accountKey"]);
 
         var db = cosmosClient.GetDatabase("ChristmasKataServer");
         
