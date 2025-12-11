@@ -68,7 +68,11 @@ app.UseHttpsRedirection();
 
 Determiner determiner = new();
 
-app.MapGet("/naughtyornice", ([FromBody] Person person) => determiner.DetermineNiceness(person))
+app.MapGet("/naughtyornice", ([FromBody] Person person) =>
+    {
+
+        return determiner.DetermineNiceness(person);
+    })
 .WithName("NaughtyOrNice")
 .RequireRateLimiting("naughtyornice")
 .WithOpenApi();

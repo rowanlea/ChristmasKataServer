@@ -2,8 +2,9 @@
 {
     public enum Niceness
     {
-        NAUGHTY = 0,
-        NICE = 1,
+        None = 0,
+        NAUGHTY = 1,
+        NICE = 2,
         GREYAREA
     }
 

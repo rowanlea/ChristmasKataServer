@@ -8,7 +8,8 @@ public class CosmosDbClient : ICosmosDbClient
     public CosmosDbClient(IConfiguration configuration)
     {
         CosmosClient cosmosClient = new CosmosClient(
-            configuration["accountEndpoint"], configuration["accountKey"]);
+            configuration["accountEndpoint"],
+            configuration["accountKey"]);
 
         var db = cosmosClient.GetDatabase("ChristmasKataServer");
         
