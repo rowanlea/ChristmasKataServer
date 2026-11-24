@@ -29,6 +29,9 @@ public static class Geometry
 
     public static IReadOnlyList<(int r, int p)> Wiring(int n) => WiringCache.GetOrAdd(n, BuildWiring);
 
+    public static IReadOnlyList<(int r, int p)> AnswerOrder(int n) =>
+        [.. Enumerable.Range(0, n).SelectMany(r => Enumerable.Range(0, r + 1).Select(p => (r, p)))];
+
     private static IReadOnlyList<(int r, int p)> BuildWiring(int n)
     {
         var order = new List<(int r, int p)>(n * (n + 1) / 2) { (0, 0) };

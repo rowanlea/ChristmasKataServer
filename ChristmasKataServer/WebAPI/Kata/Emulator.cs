@@ -30,6 +30,10 @@ public sealed class Emulator(EmulatorOptions? options = null)
     {
         private readonly HashSet<Repeat> _seen = new(ReferenceEqualityComparer.Instance);
 
+        private readonly IReadOnlyList<(int r, int p)> _wiring = options.Quirks.HasFlag(Quirks.AnswerOrderWiring)
+            ? Geometry.AnswerOrder(size)
+            : Geometry.Wiring(size);
+
         public Tree Tree { get; private set; } = new(size);
         public long Executed { get; private set; }
         public List<LoopStats> Loops { get; } = [];
@@ -68,6 +72,9 @@ public sealed class Emulator(EmulatorOptions? options = null)
                     break;
                 case Grow grow: ApplyGrow(grow.State); break;
                 case Cycle: ApplyCycle(); break;
+                case Sequence sequence: ApplySequence(sequence.State); break;
+                case Chase: ApplyChase(); break;
+                case Fall: ApplyFall(); break;
                 default:
                     throw new NotSupportedException($"{instruction.GetType().Name} is not supported yet");
             }
@@ -103,6 +110,38 @@ public sealed class Emulator(EmulatorOptions? options = null)
                     return;
                 }
             });
+        }
+
+        private void ApplySequence(Bulb state)
+        {
+            foreach (var (r, p) in _wiring)
+            {
+                if (Tree[r, p] != Bulb.K) continue;
+                Tree[r, p] = state;
+                return;
+            }
+        }
+
+        private void ApplyChase()
+        {
+            var next = new Tree(size);
+            for (var i = 0; i < _wiring.Count; i++)
+            {
+                var (r, p) = _wiring[i];
+                var (nr, np) = _wiring[(i + 1) % _wiring.Count];
+                next[nr, np] = Tree[r, p];
+            }
+            Tree = next;
+        }
+
+        private void ApplyFall()
+        {
+            var next = new Tree(size);
+            ForEachBulb((r, p) =>
+            {
+                if (r + 2 < size) next[r + 2, p + 1] = Tree[r, p];
+            });
+            Tree = next;
         }
 
         private void ApplyCycle() => ForEachBulb((r, p) =>

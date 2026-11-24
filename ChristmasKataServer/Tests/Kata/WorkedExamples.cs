@@ -13,7 +13,6 @@ public class WorkedExamples
     public void Paint_and_transform_examples(string script, string expected) =>
         Assert.That(Answer(script), Is.EqualTo(expected));
 
-    [Category("Task4")]
     [TestCase("SIZE 4\nROW 0 W\nREPEAT 2\n  FALL\n  SEQUENCE G\nEND\nROTATE\nREPEAT 3\n  CHASE\nEND", "KKGKKKKGKK")]
     [TestCase("SIZE 4\nSET 0 0 R\nSET 1 0 G\nSET 1 1 B\nFALL", "KKKKRKKGBK")]
     [TestCase("SIZE 4\n# comments and blank lines are ignored, even inside blocks\nSET 0 0 R\nROW 3 B\n\nREPEAT 0\n  FILL W\nEND\nREPEAT 1\n  REPEAT 2\n    # nothing here\n  END\n  REPEAT 3\n    CYCLE\n    REPEAT 2\n      CHASE\n    END\n  END\nEND\nSET 3 1 G", "KKGGGGWGKK")]

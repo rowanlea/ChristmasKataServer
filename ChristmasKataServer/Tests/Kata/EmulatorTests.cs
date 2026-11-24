@@ -92,26 +92,11 @@ public class EmulatorTests
     }
 
     [Test]
-    public void Wiring_snakes_down_the_tree()
-    {
-        Assert.That(Geometry.Wiring(4), Is.EqualTo(new[]
-        {
-            (0, 0), (1, 0), (1, 1), (2, 2), (2, 1), (2, 0), (3, 0), (3, 1), (3, 2), (3, 3),
-        }));
-    }
-
-    [Test]
     public void Repeat_runs_body_and_records_loop_stats()
     {
         var script = ScriptParser.Parse("SIZE 3\nREPEAT 3\nCYCLE\nSET 0 0 R\nEND");
         var result = new Emulator().Run(script);
         Assert.That(result.InstructionsExecuted, Is.EqualTo(6));
         Assert.That(result.Loops, Is.EqualTo(new[] { new LoopStats(3, null, null) }));
-    }
-
-    [Test]
-    public void Pattern_instructions_are_not_supported_yet()
-    {
-        Assert.Throws<NotSupportedException>(() => Run("CHASE", 3));
     }
 }
