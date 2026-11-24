@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using WebAPI.Kata.Puzzles;
 
 namespace WebAPI.Service;
@@ -21,7 +20,7 @@ public class ParticipantRepository : IParticipantRepository
 
     public Task<string> Create(string teamName)
     {
-        var userSecret = $"{teamName}-secret-${RandomNumberGenerator.GetInt32(1000, 9999)}";
+        var userSecret = TeamSecrets.New();
         var isSuccessful = _participants.TryAdd(teamName, new Participant
         {
             Id = teamName,

@@ -8,7 +8,7 @@ Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 3
 
 | Route | Request | Success | Failures |
 | --- | --- | --- | --- |
-| `GET /register/{teamName}` *public* | none | `200` JSON string: the team secret | `400` invalid or taken name |
+| `GET /register/{teamName}` *public* | none | `200` JSON string: the team secret, 32 lowercase hex characters | `400` invalid or taken name |
 | `POST /puzzles/{puzzle}/challenges` | none | `201` `{"challengeId","puzzle","size","script","expiresAt"}` | `404` unknown puzzle, `403` locked, `429` |
 | `POST /challenges/{challengeId}/submission` | body `image/png`, at most 1 MiB | `200` `{"puzzle","correct","bulbCount","points","bestPoints","unlocked"}` | `404` unknown or another team's, `409` already submitted, `410` expired, `400` not a 1200 x 1200 PNG, `413` too large, `429` |
 | `GET /shows/permission` | none | `204` | `403` |

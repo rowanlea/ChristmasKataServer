@@ -1,5 +1,4 @@
 using System.Net;
-using System.Security.Cryptography;
 using Microsoft.Azure.Cosmos;
 using WebAPI.Database;
 using WebAPI.Kata.Puzzles;
@@ -46,7 +45,7 @@ public class CosmosParticipantRepository : IParticipantRepository
 
     public async Task<string> Create(string teamName)
     {
-        var userSecret = $"{teamName}-secret-${RandomNumberGenerator.GetInt32(1000, 9999)}";
+        var userSecret = TeamSecrets.New();
         var participant = new Participant
         {
             Id = teamName, 

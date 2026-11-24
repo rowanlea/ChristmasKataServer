@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 
 namespace Tests.Api;
 
@@ -29,6 +30,17 @@ public class RegistrationTests
 
         Assert.That(first.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+    }
+
+    [Test]
+    public async Task Register_returns_a_32_char_lowercase_hex_secret()
+    {
+        var first = await _client.GetFromJsonAsync<string>("/register/team-07");
+        var second = await _client.GetFromJsonAsync<string>("/register/team-08");
+
+        Assert.That(first, Does.Match("^[0-9a-f]{32}$"));
+        Assert.That(second, Does.Match("^[0-9a-f]{32}$"));
+        Assert.That(second, Is.Not.EqualTo(first));
     }
 
     [TestCase("%3Cscript%3E")]
