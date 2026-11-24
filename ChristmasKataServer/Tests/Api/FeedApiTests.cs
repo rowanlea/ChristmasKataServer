@@ -72,6 +72,34 @@ public class FeedApiTests
         Assert.That(JsonDocument.Parse(events["leaderboard"]).RootElement[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
     }
 
+    [Test]
+    public async Task Leaderboard_is_read_once_per_change_however_many_subscribers()
+    {
+        var clients = Enumerable.Range(0, 3).Select(_ => _factory.CreateClient()).ToList();
+        var responses = await Task.WhenAll(clients.Select(c =>
+            c.GetAsync("/feed/events", HttpCompletionOption.ResponseHeadersRead)));
+        var readers = new List<StreamReader>();
+        foreach (var r in responses) readers.Add(new StreamReader(await r.Content.ReadAsStreamAsync()));
+        var empty = JsonDocument.Parse(await clients[0].GetStringAsync("/leaderboard")).RootElement;
+        Assert.That(empty[0].GetProperty("total").GetInt32(), Is.EqualTo(0));
+        var before = _factory.Spy.AllTeamReads;
+
+        await SubmitPerfect();
+        foreach (var reader in readers)
+        {
+            var events = await ReadEvents(reader, "leaderboard");
+            Assert.That(JsonDocument.Parse(events["leaderboard"]).RootElement[0].GetProperty("total").GetInt32(),
+                Is.EqualTo(100));
+        }
+        var board = JsonDocument.Parse(await clients[0].GetStringAsync("/leaderboard")).RootElement;
+
+        Assert.That(board[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
+        Assert.That(_factory.Spy.AllTeamReads - before, Is.EqualTo(1));
+        foreach (var reader in readers) reader.Dispose();
+        foreach (var r in responses) r.Dispose();
+        foreach (var c in clients) c.Dispose();
+    }
+
     internal static async Task<Dictionary<string, string>> ReadEvents(StreamReader reader, params string[] wanted)
     {
         var found = new Dictionary<string, string>();

@@ -5,9 +5,23 @@ namespace Tests.Api;
 
 public sealed class SpyRepository(IParticipantRepository inner) : IParticipantRepository
 {
+    private int _allTeamReads;
+
     public bool HideOnLookup { get; set; }
 
-    public Task<IEnumerable<Participant>> GetAllParticipants() => inner.GetAllParticipants();
+    public int AllTeamReads => Volatile.Read(ref _allTeamReads);
+
+    public Task<IEnumerable<Participant>> GetAllParticipants()
+    {
+        Interlocked.Increment(ref _allTeamReads);
+        return inner.GetAllParticipants();
+    }
+
+    public Task<IEnumerable<Participant>> GetScores()
+    {
+        Interlocked.Increment(ref _allTeamReads);
+        return inner.GetScores();
+    }
 
     public async Task<Participant?> GetParticipantBy(string teamName) =>
         HideOnLookup ? null : await inner.GetParticipantBy(teamName);

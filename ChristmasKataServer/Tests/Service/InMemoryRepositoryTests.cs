@@ -77,4 +77,22 @@ public class InMemoryRepositoryTests
         Assert.That(second, Is.Null);
         Assert.That(await repo.ParticipantExists("team", first!), Is.True);
     }
+
+    [Test]
+    public async Task Scores_carry_best_scores_but_not_shows()
+    {
+        var repo = new ParticipantRepository();
+        await repo.Create("team");
+        await repo.RecordScore("team", PuzzleCatalogue.Find("1.1")!, 120, false);
+        await repo.RecordScore("team", PuzzleCatalogue.Find("1.1")!, 136, true);
+        await repo.SaveShow("team", new Show(["A"], DateTimeOffset.UnixEpoch));
+
+        var score = (await repo.GetScores()).Single();
+
+        Assert.That(score.TeamName, Is.EqualTo("team"));
+        Assert.That(score.BestCorrect["1.1"], Is.EqualTo(136));
+        Assert.That(score.PublicBestCorrect["1.1"], Is.EqualTo(120));
+        Assert.That(score.Show, Is.Null);
+        Assert.That(score.UserSecret, Is.Null);
+    }
 }

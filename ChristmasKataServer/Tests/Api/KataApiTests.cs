@@ -234,6 +234,19 @@ public class KataApiTests
     }
 
     [Test]
+    public async Task Leaderboard_shows_a_team_registered_after_it_was_last_built()
+    {
+        using var anonymous = _factory.CreateClient();
+        await anonymous.GetAsync("/leaderboard");
+
+        using var other = await _factory.RegisterTeam("team-08");
+        var board = await Json(await anonymous.GetAsync("/leaderboard"));
+
+        Assert.That(board.EnumerateArray().Select(e => e.GetProperty("teamName").GetString()),
+            Is.EquivalentTo(new[] { "team-07", "team-08" }));
+    }
+
+    [Test]
     public async Task Leaderboard_frozen_hides_post_freeze_scores()
     {
         var repository = _factory.Services.GetRequiredService<IParticipantRepository>();

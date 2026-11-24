@@ -16,7 +16,7 @@ public static class FeedEndpoints
             .WithName("Feed")
             .WithMetadata(new SkipTeamValidationAttribute());
 
-        app.MapGet("/feed/events", async (HttpContext context, Feed feed, IParticipantRepository repository) =>
+        app.MapGet("/feed/events", async (HttpContext context, Feed feed, LeaderboardCache leaderboard) =>
             {
                 var cancellation = context.RequestAborted;
                 var reader = feed.Subscribe(cancellation);
@@ -46,8 +46,7 @@ public static class FeedEndpoints
                         var (name, data) = feedEvent switch
                         {
                             TileAdded added => ("tile", (object)added.Tile),
-                            LeaderboardChanged => ("leaderboard",
-                                Leaderboard.Build(await repository.GetAllParticipants(), live: false)),
+                            LeaderboardChanged => ("leaderboard", await leaderboard.Public()),
                             ShowAdded show => ("show", new { teamName = show.TeamName, first = show.First }),
                             _ => ("", (object)""),
                         };

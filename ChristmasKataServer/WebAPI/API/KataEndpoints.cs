@@ -70,7 +70,7 @@ public static class KataEndpoints
 
         app.MapPost("/challenges/{challengeId}/submission", async (
                 string challengeId, HttpContext context, IParticipantRepository repository,
-                ChallengeStore store, EventClock clock, Feed feed) =>
+                ChallengeStore store, EventClock clock, Feed feed, LeaderboardCache leaderboard) =>
             {
                 var team = Bodies.Team(context);
                 var png = await Bodies.ReadBounded(context.Request, MaxPngBytes, context.RequestAborted);
@@ -109,6 +109,7 @@ public static class KataEndpoints
 
                 var frozen = clock.Frozen;
                 var (_, update) = await repository.RecordScore(team, puzzle, correct, frozen);
+                if (!frozen) leaderboard.Invalidate();
                 feed.Publish(team, puzzle, correct, sampled, frozen);
 
                 return Results.Ok(new
@@ -125,8 +126,7 @@ public static class KataEndpoints
             .RequireRateLimiting("submissions")
             .WithName("Submit");
 
-        app.MapGet("/leaderboard", async (IParticipantRepository repository) =>
-                Results.Ok(Leaderboard.Build(await repository.GetAllParticipants(), live: false)))
+        app.MapGet("/leaderboard", async (LeaderboardCache leaderboard) => Results.Ok(await leaderboard.Public()))
             .WithName("Leaderboard")
             .WithMetadata(new SkipTeamValidationAttribute());
 
@@ -138,7 +138,7 @@ public static class KataEndpoints
                 if (supplied.Length == 0 || !CryptographicOperations.FixedTimeEquals(supplied, expected))
                     return Bodies.Error(StatusCodes.Status401Unauthorized, "Invalid admin key");
 
-                return Results.Ok(Leaderboard.Build(await repository.GetAllParticipants(), live: true));
+                return Results.Ok(Leaderboard.Build(await repository.GetScores(), live: true));
             })
             .WithName("FinalLeaderboard")
             .WithMetadata(new SkipTeamValidationAttribute());

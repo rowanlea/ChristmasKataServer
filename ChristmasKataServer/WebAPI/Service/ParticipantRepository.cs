@@ -13,6 +13,19 @@ public class ParticipantRepository : IParticipantRepository
         return Task.FromResult<IEnumerable<Participant>>(_participants.Keys.Select(Snapshot).OfType<Participant>().ToList());
     }
 
+    public Task<IEnumerable<Participant>> GetScores()
+    {
+        return Task.FromResult<IEnumerable<Participant>>(_participants.Keys.Select(Snapshot).OfType<Participant>()
+            .Select(p => new Participant
+            {
+                Id = p.Id,
+                TeamName = p.TeamName,
+                BestCorrect = p.BestCorrect,
+                PublicBestCorrect = p.PublicBestCorrect,
+            })
+            .ToList());
+    }
+
     public Task<Participant?> GetParticipantBy(string teamName)
     {
         return Task.FromResult(Snapshot(teamName));

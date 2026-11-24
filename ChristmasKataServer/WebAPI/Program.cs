@@ -49,6 +49,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddSingleton<EventClock>();
 builder.Services.AddSingleton<Feed>();
+builder.Services.AddSingleton<LeaderboardCache>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -68,7 +69,8 @@ app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/register/{teamName}", async (IParticipantRepository participantRepository, [FromRoute] string teamName) =>
+app.MapGet("/register/{teamName}", async (
+    IParticipantRepository participantRepository, LeaderboardCache leaderboard, [FromRoute] string teamName) =>
 {
     if (!TeamNames.IsValid(teamName))
     {
@@ -77,6 +79,7 @@ app.MapGet("/register/{teamName}", async (IParticipantRepository participantRepo
 
     var participantIsAlreadyRegistered = await participantRepository.GetParticipantBy(teamName) != null;
     var secret = participantIsAlreadyRegistered ? null : await participantRepository.Create(teamName);
+    if (secret is not null) leaderboard.Invalidate();
 
     return secret is null
         ? Results.BadRequest(new { error = "Team name already exists" })

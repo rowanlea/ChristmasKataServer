@@ -13,9 +13,14 @@ public class CosmosParticipantRepository : IParticipantRepository
     {
         _container = client.Container;
     }
-    public async Task<IEnumerable<Participant>> GetAllParticipants()
+    public Task<IEnumerable<Participant>> GetAllParticipants() => Query("SELECT * FROM c");
+
+    public Task<IEnumerable<Participant>> GetScores() =>
+        Query("SELECT c.id, c.teamName, c.BestCorrect, c.PublicBestCorrect FROM c");
+
+    private async Task<IEnumerable<Participant>> Query(string query)
     {
-        var queryDefinition = new QueryDefinition("SELECT * FROM c");
+        var queryDefinition = new QueryDefinition(query);
         var result = _container.GetItemQueryIterator<Participant>(queryDefinition);
         
         var results = new List<Participant>();

@@ -40,7 +40,7 @@ public sealed class Feed
 
     public async Task InitialiseAsync(IParticipantRepository repository)
     {
-        var participants = await repository.GetAllParticipants();
+        var participants = await repository.GetScores();
         lock (_gate)
         {
             foreach (var participant in participants)
