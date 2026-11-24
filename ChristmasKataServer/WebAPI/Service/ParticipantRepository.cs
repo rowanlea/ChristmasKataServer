@@ -11,13 +11,12 @@ public class ParticipantRepository : IParticipantRepository
 
     public Task<IEnumerable<Participant>> GetAllParticipants()
     {
-        return Task.FromResult<IEnumerable<Participant>>(_participants.Values.ToList());
+        return Task.FromResult<IEnumerable<Participant>>(_participants.Keys.Select(Snapshot).OfType<Participant>().ToList());
     }
 
     public Task<Participant?> GetParticipantBy(string teamName)
     {
-        _participants.TryGetValue(teamName, out var participant);
-        return Task.FromResult(participant);
+        return Task.FromResult(Snapshot(teamName));
     }
 
     public Task<string> Create(string teamName)
@@ -50,7 +49,7 @@ public class ParticipantRepository : IParticipantRepository
         lock (_locks.GetOrAdd(teamName, _ => new object()))
         {
             var update = participant.RecordScore(puzzle, correct, frozen);
-            return Task.FromResult((participant, update));
+            return Task.FromResult((Copy(participant), update));
         }
     }
 
@@ -64,6 +63,21 @@ public class ParticipantRepository : IParticipantRepository
             return Task.FromResult(first);
         }
     }
+
+    private Participant? Snapshot(string teamName)
+    {
+        if (!_participants.TryGetValue(teamName, out var participant)) return null;
+        lock (_locks.GetOrAdd(teamName, _ => new object()))
+        {
+            return Copy(participant);
+        }
+    }
+
+    private static Participant Copy(Participant p) => p with
+    {
+        BestCorrect = new Dictionary<string, int>(p.BestCorrect),
+        PublicBestCorrect = new Dictionary<string, int>(p.PublicBestCorrect),
+    };
 
     private Participant Require(string teamName) =>
         _participants.TryGetValue(teamName, out var p) ? p : throw new KeyNotFoundException($"Unknown team {teamName}");
