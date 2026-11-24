@@ -27,7 +27,7 @@ public class AuthenticationMiddleware
         if (string.IsNullOrWhiteSpace(teamName) || string.IsNullOrWhiteSpace(teamSecret))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Missing team credentials");
+            await context.Response.WriteAsJsonAsync(new { error = "Missing team credentials" });
             return;
         }
 
@@ -36,7 +36,7 @@ public class AuthenticationMiddleware
         if (!exists)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Invalid team credentials");
+            await context.Response.WriteAsJsonAsync(new { error = "Invalid team credentials" });
             return;
         }
 

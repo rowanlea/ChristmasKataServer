@@ -12,11 +12,6 @@ public class CosmosParticipantRepository : IParticipantRepository
     {
         _container = client.Container;
     }
-    public Participant TryGetOrCreateParticipant(string teamName, string secret)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<IEnumerable<Participant>> GetAllParticipants()
     {
         var queryDefinition = new QueryDefinition("SELECT * FROM c");
