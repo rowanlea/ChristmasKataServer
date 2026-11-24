@@ -32,6 +32,13 @@ public sealed class Tree
         return copy;
     }
 
+    public Tree Permute(int[] destination)
+    {
+        var next = new Tree(Size);
+        for (var i = 0; i < _bulbs.Length; i++) next._bulbs[destination[i]] = _bulbs[i];
+        return next;
+    }
+
     public string ToAnswerLine() => string.Create(_bulbs.Length, _bulbs, static (span, bulbs) =>
     {
         for (var i = 0; i < bulbs.Length; i++) span[i] = bulbs[i].ToChar();

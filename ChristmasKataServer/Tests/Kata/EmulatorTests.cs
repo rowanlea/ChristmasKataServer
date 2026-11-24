@@ -95,7 +95,7 @@ public class EmulatorTests
     public void Repeat_runs_body_and_records_loop_stats()
     {
         var script = ScriptParser.Parse("SIZE 3\nREPEAT 3\nCYCLE\nSET 0 0 R\nEND");
-        var result = new Emulator().Run(script);
+        var result = new Emulator(new EmulatorOptions(DetectCycles: false)).Run(script);
         Assert.That(result.InstructionsExecuted, Is.EqualTo(6));
         Assert.That(result.Loops, Is.EqualTo(new[] { new LoopStats(3, null, null) }));
     }

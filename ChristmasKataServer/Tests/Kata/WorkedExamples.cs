@@ -19,7 +19,6 @@ public class WorkedExamples
     public void Pattern_examples(string script, string expected) =>
         Assert.That(Answer(script), Is.EqualTo(expected));
 
-    [Category("Task5")]
     [TestCase("SIZE 4\nSET 2 1 R\nSET 3 0 G\nREPEAT 1000000000\n  CYCLE\n  GROW R\n  ROTATE\nEND", "GGGRRRRRRR")]
     [TestCase("SIZE 4\nSET 0 0 R\nSET 2 0 G\nSET 3 2 B\nSET 1 1 W\nREPEAT 1000000000\n  ROTATE\n  CHASE\n  CYCLE\nEND\nREPEAT 999999999\n  MIRROR\n  CHASE\nEND", "GKKKBKRWKK")]
     public void Long_running_examples(string script, string expected) =>

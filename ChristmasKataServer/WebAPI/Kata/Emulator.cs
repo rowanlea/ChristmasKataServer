@@ -30,6 +30,9 @@ public sealed class Emulator(EmulatorOptions? options = null)
     {
         private readonly HashSet<Repeat> _seen = new(ReferenceEqualityComparer.Instance);
 
+        private readonly Dictionary<Delegate, int[]> _permutations = [];
+        private int[]? _chase;
+
         private readonly IReadOnlyList<(int r, int p)> _wiring = options.Quirks.HasFlag(Quirks.AnswerOrderWiring)
             ? Geometry.AnswerOrder(size)
             : Geometry.Wiring(size);
@@ -43,12 +46,43 @@ public sealed class Emulator(EmulatorOptions? options = null)
             foreach (var instruction in body) Execute(instruction);
         }
 
+        private void ExecuteRepeat(Repeat repeat)
+        {
+            var slot = -1;
+            if (_seen.Add(repeat))
+            {
+                slot = Loops.Count;
+                Loops.Add(new LoopStats(repeat.Count, null, null));
+            }
+
+            var detecting = options.DetectCycles;
+            var visited = new Dictionary<string, long>();
+
+            for (long i = 0; i < repeat.Count; i++)
+            {
+                if (detecting)
+                {
+                    var state = Tree.ToAnswerLine();
+                    if (visited.TryGetValue(state, out var first))
+                    {
+                        var period = i - first;
+                        if (slot >= 0) Loops[slot] = Loops[slot] with { PrePeriod = (int)first, Period = (int)period };
+                        i += (repeat.Count - i) / period * period;
+                        detecting = false;
+                        if (i >= repeat.Count) break;
+                    }
+                    else visited[state] = i;
+                }
+
+                Execute(repeat.Body);
+            }
+        }
+
         private void Execute(Instruction instruction)
         {
             if (instruction is Repeat repeat)
             {
-                if (_seen.Add(repeat)) Loops.Add(new LoopStats(repeat.Count, null, null));
-                for (long i = 0; i < repeat.Count; i++) Execute(repeat.Body);
+                ExecuteRepeat(repeat);
                 return;
             }
 
@@ -88,13 +122,17 @@ public sealed class Emulator(EmulatorOptions? options = null)
 
         private void Transform(Func<int, int, int, (int r, int p)> map)
         {
-            var next = new Tree(size);
-            ForEachBulb((r, p) =>
+            if (!_permutations.TryGetValue(map, out var destination))
             {
-                var (nr, np) = map(size, r, p);
-                next[nr, np] = Tree[r, p];
-            });
-            Tree = next;
+                destination = new int[size * (size + 1) / 2];
+                ForEachBulb((r, p) =>
+                {
+                    var (nr, np) = map(size, r, p);
+                    destination[Tree.Index(r, p)] = Tree.Index(nr, np);
+                });
+                _permutations[map] = destination;
+            }
+            Tree = Tree.Permute(destination);
         }
 
         private void ApplyGrow(Bulb state)
@@ -124,14 +162,17 @@ public sealed class Emulator(EmulatorOptions? options = null)
 
         private void ApplyChase()
         {
-            var next = new Tree(size);
-            for (var i = 0; i < _wiring.Count; i++)
+            if (_chase is null)
             {
-                var (r, p) = _wiring[i];
-                var (nr, np) = _wiring[(i + 1) % _wiring.Count];
-                next[nr, np] = Tree[r, p];
+                _chase = new int[_wiring.Count];
+                for (var i = 0; i < _wiring.Count; i++)
+                {
+                    var (r, p) = _wiring[i];
+                    var (nr, np) = _wiring[(i + 1) % _wiring.Count];
+                    _chase[Tree.Index(r, p)] = Tree.Index(nr, np);
+                }
             }
-            Tree = next;
+            Tree = Tree.Permute(_chase);
         }
 
         private void ApplyFall()
