@@ -107,8 +107,9 @@ public static class KataEndpoints
                 var expected = challenge.Answer.ToAnswerLine();
                 var correct = Enumerable.Range(0, bulbCount).Count(i => sampled[i] == expected[i]);
 
-                var (_, update) = await repository.RecordScore(team, puzzle, correct, clock.Frozen);
-                feed.Publish(team, puzzle, correct, sampled);
+                var frozen = clock.Frozen;
+                var (_, update) = await repository.RecordScore(team, puzzle, correct, frozen);
+                feed.Publish(team, puzzle, correct, sampled, frozen);
 
                 return Results.Ok(new
                 {

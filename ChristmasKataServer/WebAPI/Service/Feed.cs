@@ -15,7 +15,7 @@ public sealed record LeaderboardChanged : FeedEvent;
 
 public sealed record ShowAdded(string TeamName, bool First) : FeedEvent;
 
-public sealed class Feed(EventClock clock)
+public sealed class Feed
 {
     private const string SecretSantaId = "7.1";
     private const int LatestCount = 8;
@@ -56,9 +56,8 @@ public sealed class Feed(EventClock clock)
         }
     }
 
-    public Tile Publish(string team, Puzzle p, int correct, string sampledStates)
+    public Tile Publish(string team, Puzzle p, int correct, string sampledStates, bool frozen)
     {
-        var frozen = clock.Frozen;
         lock (_gate)
         {
             var decided = correct == BulbCount(p) ? DecideBanner(team, p) : null;

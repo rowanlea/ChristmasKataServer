@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Time.Testing;
 using WebAPI.Kata.Puzzles;
 using WebAPI.Service;
 
@@ -7,20 +5,13 @@ namespace Tests.Service;
 
 public class FeedTests
 {
-    private static readonly DateTimeOffset Freeze = new(2026, 12, 10, 20, 45, 0, TimeSpan.Zero);
-
-    private FakeTimeProvider _time = null!;
-
-    [SetUp]
-    public void SetUp() => _time = new FakeTimeProvider(new DateTimeOffset(2026, 12, 10, 18, 0, 0, TimeSpan.Zero));
-
-    private Feed NewFeed() => new(new EventClock(_time, Options.Create(new EventOptions { FreezesAt = Freeze })));
+    private static Feed NewFeed() => new();
 
     private static Puzzle P(string id) => PuzzleCatalogue.Find(id)!;
 
     private static int Full(string id) => P(id).Size * (P(id).Size + 1) / 2;
 
-    private static Tile Solve(Feed feed, string team, string id) => feed.Publish(team, P(id), Full(id), "R");
+    private static Tile Solve(Feed feed, string team, string id) => feed.Publish(team, P(id), Full(id), "R", frozen: false);
 
     private static List<string> Round1() => PuzzleCatalogue.InRound(1).Select(p => p.Id).ToList();
 
@@ -39,7 +30,7 @@ public class FeedTests
     [Test]
     public void Partial_marks_get_no_banner()
     {
-        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1") - 1, "R");
+        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1") - 1, "R", frozen: false);
 
         Assert.That(tile.Banner, Is.Null);
     }
@@ -82,6 +73,7 @@ public class FeedTests
         var later = Solve(feed, "beta", ids[^1]);
 
         Assert.That(finish.Banner, Is.EqualTo(new Banner("first-round-finish", "alpha first to finish round 1")));
+        Assert.That(later.Banner, Is.Null);
     }
 
     [Test]
@@ -89,7 +81,7 @@ public class FeedTests
     {
         var feed = NewFeed();
 
-        for (var i = 0; i < 10; i++) feed.Publish($"team-{i}", P("1.1"), 1, "R");
+        for (var i = 0; i < 10; i++) feed.Publish($"team-{i}", P("1.1"), 1, "R", frozen: false);
 
         Assert.That(feed.Latest.Select(t => t.TeamName),
             Is.EqualTo(Enumerable.Range(2, 8).Reverse().Select(i => $"team-{i}")));
@@ -127,19 +119,13 @@ public class FeedTests
     [Test]
     public void Frozen_tile_has_null_correct()
     {
-        var feed = NewFeed();
-        _time.SetUtcNow(Freeze);
-
-        Assert.That(feed.Publish("alpha", P("1.1"), 100, "R").Correct, Is.Null);
+        Assert.That(NewFeed().Publish("alpha", P("1.1"), 100, "R", frozen: true).Correct, Is.Null);
     }
 
     [Test]
     public void Frozen_tile_has_no_banner()
     {
-        var feed = NewFeed();
-        _time.SetUtcNow(Freeze);
-
-        var tile = Solve(feed, "alpha", "1.1");
+        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1"), "R", frozen: true);
 
         Assert.That(tile.Banner, Is.Null);
     }
@@ -147,7 +133,7 @@ public class FeedTests
     [Test]
     public void Unfrozen_tile_carries_correct()
     {
-        Assert.That(NewFeed().Publish("alpha", P("1.1"), 100, "R").Correct, Is.EqualTo(100));
+        Assert.That(NewFeed().Publish("alpha", P("1.1"), 100, "R", frozen: false).Correct, Is.EqualTo(100));
     }
 
     [Test]
@@ -157,7 +143,7 @@ public class FeedTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var reader = feed.Subscribe(cts.Token);
 
-        var tile = feed.Publish("alpha", P("1.1"), 5, "R");
+        var tile = feed.Publish("alpha", P("1.1"), 5, "R", frozen: false);
         feed.PublishShow("alpha", true);
 
         Assert.That(await reader.ReadAsync(cts.Token), Is.EqualTo(new TileAdded(tile)));
@@ -169,11 +155,10 @@ public class FeedTests
     public async Task After_freeze_no_leaderboard_events_but_shows_flow()
     {
         var feed = NewFeed();
-        _time.SetUtcNow(Freeze);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var reader = feed.Subscribe(cts.Token);
 
-        feed.Publish("alpha", P("1.1"), 5, "R");
+        feed.Publish("alpha", P("1.1"), 5, "R", frozen: true);
         feed.PublishShow("alpha", false);
 
         Assert.That(await reader.ReadAsync(cts.Token), Is.TypeOf<TileAdded>());
