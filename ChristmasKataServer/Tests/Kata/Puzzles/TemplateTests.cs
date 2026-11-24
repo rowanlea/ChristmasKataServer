@@ -136,11 +136,4 @@ public class TemplateTests
             Assert.That(Regex.IsMatch(text, @"REPEAT[^\n]*\n(?:[^\n]*\n)*?#[^\n]*\n(?:[^\n]*\n)*?END"), $"seed {seed}");
         }
     }
-
-    [Test]
-    public void Rounds_6_and_7_stay_placeholders_until_task_8()
-    {
-        Assert.Throws<NotImplementedException>(() => P("6.1").Template(new Random(1)));
-        Assert.Throws<NotImplementedException>(() => P("7.1").Template(new Random(1)));
-    }
 }

@@ -11,6 +11,8 @@ public static class PuzzleCatalogue
         ["3.1"] = Round3.P31, ["3.2"] = Round3.P32, ["3.3"] = Round3.P33, ["3.4"] = Round3.P34,
         ["4.1"] = Round4.P41, ["4.2"] = Round4.P42, ["4.3"] = Round4.P43, ["4.4"] = Round4.P44,
         ["5.1"] = Round5.P51, ["5.2"] = Round5.P52, ["5.3"] = Round5.P53,
+        ["6.1"] = Round6.P61, ["6.2"] = Round6.P62, ["6.3"] = Round6.P63,
+        ["7.1"] = SecretSanta.Template,
     };
 
     private static Puzzle Make(string id, string name)

@@ -25,14 +25,14 @@ public sealed class Emulator(EmulatorOptions? options = null)
 {
     private readonly EmulatorOptions _options = options ?? new EmulatorOptions();
 
-    public RunResult Run(Script script)
+    public RunResult Run(Script script, Tree? start = null)
     {
-        var run = new Execution(script.Size, _options);
+        var run = new Execution(script.Size, _options, start?.Clone());
         run.Execute(script.Body);
         return new RunResult(run.Tree, run.Executed, run.Loops);
     }
 
-    private sealed class Execution(int size, EmulatorOptions options)
+    private sealed class Execution(int size, EmulatorOptions options, Tree? start)
     {
         private readonly HashSet<Repeat> _seen = new(ReferenceEqualityComparer.Instance);
 
@@ -43,7 +43,7 @@ public sealed class Emulator(EmulatorOptions? options = null)
             ? Geometry.AnswerOrder(size)
             : Geometry.Wiring(size);
 
-        public Tree Tree { get; private set; } = new(size);
+        public Tree Tree { get; private set; } = start ?? new(size);
         public long Executed { get; private set; }
         private long _work;
         public List<LoopStats> Loops { get; } = [];
