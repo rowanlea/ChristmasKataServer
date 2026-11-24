@@ -9,7 +9,13 @@ public enum Quirks
     AnswerOrderWiring = 4,
 }
 
-public sealed record EmulatorOptions(Quirks Quirks = Quirks.None, bool DetectCycles = true);
+public sealed record EmulatorOptions(
+    Quirks Quirks = Quirks.None,
+    bool DetectCycles = true,
+    long? InstructionBudget = null);
+
+public sealed class InstructionBudgetExceededException(long budget)
+    : Exception($"Run exceeded the budget of {budget} steps");
 
 public sealed record LoopStats(long Count, int? PrePeriod, int? Period);
 
@@ -39,6 +45,7 @@ public sealed class Emulator(EmulatorOptions? options = null)
 
         public Tree Tree { get; private set; } = new(size);
         public long Executed { get; private set; }
+        private long _work;
         public List<LoopStats> Loops { get; } = [];
 
         public void Execute(IReadOnlyList<Instruction> body)
@@ -74,6 +81,7 @@ public sealed class Emulator(EmulatorOptions? options = null)
                     else visited[state] = i;
                 }
 
+                Spend();
                 Execute(repeat.Body);
             }
         }
@@ -87,6 +95,7 @@ public sealed class Emulator(EmulatorOptions? options = null)
             }
 
             Executed++;
+            Spend();
             switch (instruction)
             {
                 case Set set: Tree[set.Row, set.Position] = set.State; break;
@@ -112,6 +121,12 @@ public sealed class Emulator(EmulatorOptions? options = null)
                 default:
                     throw new NotSupportedException($"{instruction.GetType().Name} is not supported yet");
             }
+        }
+
+        private void Spend()
+        {
+            if (options.InstructionBudget is { } budget && ++_work > budget)
+                throw new InstructionBudgetExceededException(budget);
         }
 
         private void ForEachBulb(Action<int, int> action)
