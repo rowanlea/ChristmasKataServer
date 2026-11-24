@@ -1,3 +1,5 @@
+using WebAPI.Kata.Puzzles;
+
 namespace WebAPI.Service;
 
 public interface IParticipantRepository
@@ -6,5 +8,6 @@ public interface IParticipantRepository
     Task<Participant?> GetParticipantBy(string teamName);
     Task<string> Create(string teamName);
     Task<bool> ParticipantExists(string teamName, string teamSecret);
-    Task UpdateParticipantScore(Participant participant);
+    Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen);
+    Task<bool> SaveShow(string teamName, Show show);
 }

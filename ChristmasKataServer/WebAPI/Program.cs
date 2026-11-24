@@ -4,6 +4,8 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.API;
 using WebAPI.Database;
+using WebAPI.Kata.Puzzles;
+using WebAPI.Scoring;
 using WebAPI.Service;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,12 +25,20 @@ if (builder.Configuration["Storage:Provider"] == "InMemory")
 else
 {
     builder.Services.AddSingleton<ICosmosDbClient, CosmosDbClient>();
-    builder.Services.AddSingleton<IParticipantRepository, CosmosParticipantRepository>();
+    builder.Services.AddSingleton<CosmosParticipantRepository>();
+    builder.Services.AddSingleton<IParticipantRepository>(sp => sp.GetRequiredService<CosmosParticipantRepository>());
 }
+
+builder.Services.AddSingleton<ChallengeStore>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app = builder.Build();
+
+if (app.Services.GetService<CosmosParticipantRepository>() is { } cosmosRepository)
+{
+    await cosmosRepository.EnsureCreated();
+}
 
 app.UseMiddleware<AuthenticationMiddleware>();
 
@@ -40,7 +50,9 @@ app.MapGet("/leaderboard", async (IParticipantRepository participantRepository) 
         var leaderboard = participants.Select(x => new
                 {
                     TeamName = x.TeamName,
-                    Score = x.Score
+                    Score = x.BestCorrect.Sum(b => PuzzleCatalogue.Find(b.Key) is { } p
+                        ? Points.For(b.Value, p.Size * (p.Size + 1) / 2)
+                        : 0)
                 })
         .OrderByDescending(x => x.Score)
         .ToList();

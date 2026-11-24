@@ -1,6 +1,8 @@
+using System.Net;
 using System.Security.Cryptography;
 using Microsoft.Azure.Cosmos;
 using WebAPI.Database;
+using WebAPI.Kata.Puzzles;
 
 namespace WebAPI.Service;
 
@@ -62,8 +64,45 @@ public class CosmosParticipantRepository : IParticipantRepository
         return participant != null && participant.UserSecret == teamSecret;
     }
 
-    public async Task UpdateParticipantScore(Participant participant)
+    public Task EnsureCreated() =>
+        _container.Database.CreateContainerIfNotExistsAsync(new ContainerProperties(_container.Id, "/id"));
+
+    public async Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen)
     {
-        await _container.ReplaceItemAsync(participant, participant.TeamName, new PartitionKey(participant.TeamName));
+        ScoreUpdate? update = null;
+        var participant = await ReadModifyReplace(teamName, p => update = p.RecordScore(puzzle, correct, frozen));
+        return (participant, update!);
+    }
+
+    public async Task<bool> SaveShow(string teamName, Show show)
+    {
+        var first = false;
+        await ReadModifyReplace(teamName, p =>
+        {
+            first = p.Show is null;
+            p.Show = show;
+        });
+        return first;
+    }
+
+    private async Task<Participant> ReadModifyReplace(string teamName, Action<Participant> modify)
+    {
+        const int attempts = 5;
+        for (var attempt = 1; ; attempt++)
+        {
+            var key = new PartitionKey(teamName);
+            var read = await _container.ReadItemAsync<Participant>(teamName, key);
+            var participant = read.Resource;
+            modify(participant);
+            try
+            {
+                var written = await _container.ReplaceItemAsync(participant, teamName, key,
+                    new ItemRequestOptions { IfMatchEtag = read.ETag });
+                return written.Resource;
+            }
+            catch (CosmosException e) when (e.StatusCode == HttpStatusCode.PreconditionFailed && attempt < attempts)
+            {
+            }
+        }
     }
 }

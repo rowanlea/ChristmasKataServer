@@ -1,11 +1,13 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
+using WebAPI.Kata.Puzzles;
 
 namespace WebAPI.Service;
 
 public class ParticipantRepository : IParticipantRepository
 {
     private readonly ConcurrentDictionary<string, Participant> _participants = new();
+    private readonly ConcurrentDictionary<string, object> _locks = new();
 
     public Task<IEnumerable<Participant>> GetAllParticipants()
     {
@@ -23,6 +25,7 @@ public class ParticipantRepository : IParticipantRepository
         var userSecret = $"{teamName}-secret-${RandomNumberGenerator.GetInt32(1000, 9999)}";
         var isSuccessful = _participants.TryAdd(teamName, new Participant
         {
+            Id = teamName,
             TeamName = teamName,
             UserSecret = userSecret,
         });
@@ -41,10 +44,27 @@ public class ParticipantRepository : IParticipantRepository
         return Task.FromResult(participant!.UserSecret == teamSecret);
     }
 
-    public Task UpdateParticipantScore(Participant participant)
+    public Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen)
     {
-        _participants[participant.TeamName] = participant;
-        return Task.CompletedTask;
+        var participant = Require(teamName);
+        lock (_locks.GetOrAdd(teamName, _ => new object()))
+        {
+            var update = participant.RecordScore(puzzle, correct, frozen);
+            return Task.FromResult((participant, update));
+        }
     }
-}
 
+    public Task<bool> SaveShow(string teamName, Show show)
+    {
+        var participant = Require(teamName);
+        lock (_locks.GetOrAdd(teamName, _ => new object()))
+        {
+            var first = participant.Show is null;
+            participant.Show = show;
+            return Task.FromResult(first);
+        }
+    }
+
+    private Participant Require(string teamName) =>
+        _participants.TryGetValue(teamName, out var p) ? p : throw new KeyNotFoundException($"Unknown team {teamName}");
+}
