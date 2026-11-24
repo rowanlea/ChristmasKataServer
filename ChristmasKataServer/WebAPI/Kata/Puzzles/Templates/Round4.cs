@@ -9,7 +9,7 @@ internal static class Round4
         var colour = Paint.Colour(rng);
         for (var run = rng.Next(3, 6); run > 0; run--)
         {
-            for (var i = rng.Next(8, 16); i > 0; i--) b.Line($"SEQUENCE {colour}");
+            for (var i = rng.Next(8, 11); i > 0; i--) b.Line($"SEQUENCE {colour}");
             colour = Paint.ColourOtherThan(rng, [colour]);
         }
         return b.ToString();
