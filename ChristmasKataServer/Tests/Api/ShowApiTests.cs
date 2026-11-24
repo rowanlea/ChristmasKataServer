@@ -121,6 +121,18 @@ public class ShowApiTests
     }
 
     [Test]
+    public async Task Show_of_exactly_500_frames_is_accepted()
+    {
+        await _factory.UnlockThrough("team-07", "7.1");
+
+        var response = await _team.PostAsync("/shows", Body(Enumerable.Repeat(Frame(), 500).ToArray()));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Created));
+        Assert.That(JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("frames").GetInt32(), Is.EqualTo(500));
+    }
+
+    [Test]
     public async Task Show_over_256KiB_is_413()
     {
         await _factory.UnlockThrough("team-07", "7.1");
