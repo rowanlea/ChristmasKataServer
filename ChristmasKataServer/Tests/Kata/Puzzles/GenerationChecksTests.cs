@@ -112,6 +112,15 @@ public class GenerationChecksTests
     }
 
     [Test]
+    public void Round_2_passes_when_one_swap_matters_and_another_does_not()
+    {
+        var sets = Pattern["SIZE 16\n".Length..];
+        var failures = Check("2.1", "SIZE 16\nFILL R\nROTATE\nMIRROR\n" + sets + "ROTATE\nMIRROR\n");
+
+        Assert.That(failures, Has.None.Contains("swap"));
+    }
+
+    [Test]
     public void Round_2_swap_inside_a_loop_body_is_checked()
     {
         var failures = Check("2.3", "SIZE 16\nFILL R\nREPEAT 3\nROTATE\nMIRROR\nEND\n");

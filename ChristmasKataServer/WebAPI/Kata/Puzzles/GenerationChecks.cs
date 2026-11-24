@@ -24,7 +24,7 @@ public static class GenerationChecks
         switch (puzzle.Round)
         {
             case 2 when SwapLeavesAnswerUnchanged(script, answer):
-                failures.Add("swapping adjacent transforms leaves the answer unchanged (swap)");
+                failures.Add("no adjacent transform pair is order-sensitive (swap)");
                 break;
             case 4 when Similarity(answer, Rerun(script, Quirks.AnswerOrderWiring)) >= MaxSimilarity:
                 failures.Add("answer-order wiring scores 60% or more");
@@ -86,9 +86,16 @@ public static class GenerationChecks
     private static bool Contains<T>(IReadOnlyList<Instruction> body) where T : Instruction =>
         body.Any(i => i is T || (i is Repeat r && Contains<T>(r.Body)));
 
-    private static bool SwapLeavesAnswerUnchanged(Script script, Tree answer) =>
-        SwappedBodies(script.Body).Any(body =>
-            Similarity(answer, new Emulator().Run(script with { Body = body }).Final) >= 1.0);
+    private static bool SwapLeavesAnswerUnchanged(Script script, Tree answer)
+    {
+        var anySwap = false;
+        foreach (var body in SwappedBodies(script.Body))
+        {
+            anySwap = true;
+            if (Similarity(answer, new Emulator().Run(script with { Body = body }).Final) < 1.0) return false;
+        }
+        return anySwap;
+    }
 
     private static IEnumerable<IReadOnlyList<Instruction>> SwappedBodies(IReadOnlyList<Instruction> body)
     {
