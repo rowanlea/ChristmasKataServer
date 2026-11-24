@@ -72,6 +72,20 @@ public class FeedTests
     }
 
     [Test]
+    public void Round_finish_beats_puzzle_first_on_same_tile()
+    {
+        var feed = NewFeed();
+        var ids = Round1();
+        foreach (var id in ids[..^1]) Solve(feed, "alpha", id);
+
+        var finish = Solve(feed, "alpha", ids[^1]);
+        var later = Solve(feed, "beta", ids[^1]);
+
+        Assert.That(finish.Banner, Is.EqualTo(new Banner("first-round-finish", "alpha first to finish round 1")));
+        Assert.That(later.Banner, Is.Null);
+    }
+
+    [Test]
     public void Feed_keeps_latest_eight_newest_first()
     {
         var feed = NewFeed();

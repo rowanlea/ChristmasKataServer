@@ -103,8 +103,8 @@ public sealed class Feed(EventClock clock)
         var firstOfRound = RoundDone(done, p.Round) && _announcedRounds.Add(p.Round);
 
         if (p.Id == SecretSantaId) return new Banner("secret-santa", $"{team} found Santa!");
-        if (firstOnPuzzle) return new Banner("first-full-marks", $"{team} first to solve {p.Id} {p.Name}");
         if (firstOfRound) return new Banner("first-round-finish", $"{team} first to finish round {p.Round}");
+        if (firstOnPuzzle) return new Banner("first-full-marks", $"{team} first to solve {p.Id} {p.Name}");
         return null;
     }
 
