@@ -4,6 +4,7 @@ const MAX_TILES = 8;
 const BANNER_MS = 6000;
 const SHOW_FRAME_MS = 100;
 const POLL_MS = 5000;
+const FREEZE_CHECK_MS = 30000;
 const ENLARGED = new Set(['first-full-marks', 'secret-santa']);
 
 const $ = (id) => document.getElementById(id);
@@ -249,6 +250,19 @@ function listen() {
   });
 }
 
+// The server sends no event when scores freeze, so check now and then while
+// the event stream is up; the polling fallback already reads /feed.
+let freezeTimer = null;
+
+async function checkFreeze() {
+  if (frozen) {
+    clearInterval(freezeTimer);
+    return;
+  }
+  if (pollTimer !== null) return;
+  if ((await getJson('/feed')).frozen) freeze();
+}
+
 async function start() {
   try {
     await loadAll(false);
@@ -256,6 +270,7 @@ async function start() {
     statusEl.textContent = 'server unreachable';
   }
   setInterval(tickShow, SHOW_FRAME_MS);
+  freezeTimer = setInterval(() => checkFreeze().catch(() => {}), FREEZE_CHECK_MS);
   listen();
 }
 
