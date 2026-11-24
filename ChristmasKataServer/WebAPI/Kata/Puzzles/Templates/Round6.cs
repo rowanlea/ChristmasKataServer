@@ -5,7 +5,7 @@ internal static class Round6
     private const long MinCount = 999_000_000;
     private const long MaxCount = 1_000_000_000;
     private const int MinSeedSpacing = 7;
-    private const int OuterPasses = 25;
+    private const int OuterPasses = 1000;
 
     private static long BigCount(Random rng) => rng.NextInt64(MinCount, MaxCount + 1);
 

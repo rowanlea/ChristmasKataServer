@@ -62,6 +62,8 @@ public sealed class Emulator(EmulatorOptions? options = null)
                 Loops.Add(new LoopStats(repeat.Count, null, null));
             }
 
+            if (options.DetectCycles && repeat.Count > 0 && TryRepeatBijection(repeat, slot)) return;
+
             var detecting = options.DetectCycles;
             var visited = new Dictionary<string, long>();
 
@@ -103,16 +105,8 @@ public sealed class Emulator(EmulatorOptions? options = null)
                     for (var p = 0; p <= row.Index; p++) Tree[row.Index, p] = row.State;
                     break;
                 case Fill fill: ForEachBulb((r, p) => Tree[r, p] = fill.State); break;
-                case Rotate:
-                    Transform(options.Quirks.HasFlag(Quirks.CounterClockwiseRotate)
-                        ? Geometry.RotateCounterClockwise
-                        : Geometry.Rotate);
-                    break;
-                case Mirror:
-                    Transform(options.Quirks.HasFlag(Quirks.MirrorWrongAxis)
-                        ? Geometry.MirrorWrongAxis
-                        : (_, r, p) => Geometry.Mirror(r, p));
-                    break;
+                case Rotate: Transform(RotateMap); break;
+                case Mirror: Transform(MirrorMap); break;
                 case Grow grow: ApplyGrow(grow.State); break;
                 case Cycle: ApplyCycle(); break;
                 case Sequence sequence: ApplySequence(sequence.State); break;
@@ -135,7 +129,9 @@ public sealed class Emulator(EmulatorOptions? options = null)
                 for (var p = 0; p <= r; p++) action(r, p);
         }
 
-        private void Transform(Func<int, int, int, (int r, int p)> map)
+        private void Transform(Func<int, int, int, (int r, int p)> map) => Tree = Tree.Permute(Destination(map));
+
+        private int[] Destination(Func<int, int, int, (int r, int p)> map)
         {
             if (!_permutations.TryGetValue(map, out var destination))
             {
@@ -147,8 +143,16 @@ public sealed class Emulator(EmulatorOptions? options = null)
                 });
                 _permutations[map] = destination;
             }
-            Tree = Tree.Permute(destination);
+            return destination;
         }
+
+        private Func<int, int, int, (int r, int p)> RotateMap => options.Quirks.HasFlag(Quirks.CounterClockwiseRotate)
+            ? Geometry.RotateCounterClockwise
+            : Geometry.Rotate;
+
+        private Func<int, int, int, (int r, int p)> MirrorMap => options.Quirks.HasFlag(Quirks.MirrorWrongAxis)
+            ? Geometry.MirrorWrongAxis
+            : (_, r, p) => Geometry.Mirror(r, p);
 
         private void ApplyGrow(Bulb state)
         {
@@ -175,7 +179,9 @@ public sealed class Emulator(EmulatorOptions? options = null)
             }
         }
 
-        private void ApplyChase()
+        private void ApplyChase() => Tree = Tree.Permute(ChaseDestination());
+
+        private int[] ChaseDestination()
         {
             if (_chase is null)
             {
@@ -187,7 +193,88 @@ public sealed class Emulator(EmulatorOptions? options = null)
                     _chase[Tree.Index(r, p)] = Tree.Index(nr, np);
                 }
             }
-            Tree = Tree.Permute(_chase);
+            return _chase;
+        }
+
+        /// <summary>
+        /// A body of only ROTATE, MIRROR, CHASE and CYCLE moves every bulb along one fixed permutation and shifts its
+        /// colour by a fixed amount per pass, so any number of passes is applied through the permutation's cycles
+        /// instead of one pass at a time. Returns false for any other body.
+        /// </summary>
+        private bool TryRepeatBijection(Repeat repeat, int slot)
+        {
+            if (repeat.Body.Count == 0) return false;
+            var bulbs = size * (size + 1) / 2;
+            var destination = Enumerable.Range(0, bulbs).ToArray();
+            var shift = 0;
+            foreach (var instruction in repeat.Body)
+            {
+                int[] step;
+                switch (instruction)
+                {
+                    case Rotate: step = Destination(RotateMap); break;
+                    case Mirror: step = Destination(MirrorMap); break;
+                    case Chase: step = ChaseDestination(); break;
+                    case Cycle: shift++; continue;
+                    default: return false;
+                }
+                for (var i = 0; i < bulbs; i++) destination[i] = step[destination[i]];
+            }
+
+            var before = Tree;
+            var after = new Tree(size);
+            var visited = new bool[bulbs];
+            long period = 1;
+            var periodKnown = true;
+            for (var start = 0; start < bulbs; start++)
+            {
+                if (visited[start]) continue;
+                var cycle = new List<int>();
+                for (var i = start; !visited[i]; i = destination[i])
+                {
+                    visited[i] = true;
+                    cycle.Add(i);
+                }
+                var moved = (int)(repeat.Count % cycle.Count);
+                var recoloured = (int)(repeat.Count % 4 * shift % 4);
+                for (var j = 0; j < cycle.Count; j++)
+                    after.SetByIndex(cycle[(j + moved) % cycle.Count], Recolour(before.GetByIndex(cycle[j]), recoloured));
+
+                if (!periodKnown) continue;
+                period = Lcm(period, CyclePeriod(before, cycle, shift));
+                if (period >= repeat.Count) periodKnown = false;
+            }
+            Tree = after;
+            if (slot >= 0 && periodKnown) Loops[slot] = Loops[slot] with { PrePeriod = 0, Period = (int)period };
+            return true;
+        }
+
+        private static int CyclePeriod(Tree tree, List<int> cycle, int shift)
+        {
+            var length = cycle.Count;
+            for (var candidate = 1; candidate < 4 * length; candidate++)
+            {
+                if (4 * length % candidate != 0) continue;
+                var moved = candidate % length;
+                var recoloured = candidate % 4 * shift % 4;
+                var holds = true;
+                for (var j = 0; j < length && holds; j++)
+                    holds = Recolour(tree.GetByIndex(cycle[j]), recoloured) == tree.GetByIndex(cycle[(j + moved) % length]);
+                if (holds) return candidate;
+            }
+            return 4 * length;
+        }
+
+        private static readonly Bulb[] ColourOrder = [Bulb.R, Bulb.G, Bulb.B, Bulb.W];
+
+        private static Bulb Recolour(Bulb bulb, int steps) =>
+            bulb == Bulb.K ? Bulb.K : ColourOrder[(Array.IndexOf(ColourOrder, bulb) + steps) % 4];
+
+        private static long Lcm(long a, long b)
+        {
+            var (x, y) = (a, b);
+            while (y != 0) (x, y) = (y, x % y);
+            return a / x * b;
         }
 
         private void ApplyFall()

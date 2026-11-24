@@ -24,7 +24,7 @@ public class SilentNightTests
             Assert.That(GenerationChecks.Failures(puzzle, script, result), Is.Empty, $"{id} seed {seed}");
             Assert.That(result.Final.ToAnswerLine(), Is.EqualTo(challenge.Answer.ToAnswerLine()));
             foreach (var loop in result.Loops)
-                Assert.That(loop.Count == 25 && id == "6.3" || loop.Count >= 999_000_000,
+                Assert.That(loop.Count == 1000 && id == "6.3" || loop.Count >= 999_000_000,
                     Is.True, $"{id} seed {seed}: loop count {loop.Count}");
             if (id == "6.2")
                 Assert.That(result.Loops.Single().PrePeriod, Is.GreaterThanOrEqualTo(20), $"seed {seed}");

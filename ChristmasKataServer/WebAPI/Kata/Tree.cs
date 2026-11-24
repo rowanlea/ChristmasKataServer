@@ -21,6 +21,10 @@ public sealed class Tree
         set => _bulbs[Locate(r, p)] = value;
     }
 
+    internal Bulb GetByIndex(int index) => _bulbs[index];
+
+    internal void SetByIndex(int index, Bulb value) => _bulbs[index] = value;
+
     public static int Index(int r, int p) => r * (r + 1) / 2 + p;
 
     public bool Contains(int r, int p) => r >= 0 && r < Size && p >= 0 && p <= r;
