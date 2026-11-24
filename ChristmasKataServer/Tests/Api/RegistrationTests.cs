@@ -35,6 +35,8 @@ public class RegistrationTests
     [TestCase("%20")]
     [TestCase("a%20b")]
     [TestCase("abcdefghijklmnopqrstuvwxy")]
+    [TestCase("team%0A")]
+    [TestCase("abcdefghijklmnopqrstuvwx%0A")]
     public async Task Register_rejects_invalid_names(string name)
     {
         var response = await _client.GetAsync($"/register/{name}");
@@ -43,11 +45,19 @@ public class RegistrationTests
     }
 
     [Test]
+    public async Task Register_accepts_24_character_name()
+    {
+        var response = await _client.GetAsync("/register/abcdefghijklmnopqrstuvwx");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
     public async Task Register_rejects_empty_name()
     {
         var response = await _client.GetAsync("/register/");
 
-        Assert.That(response.StatusCode, Is.Not.EqualTo(HttpStatusCode.OK));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
     [Test]

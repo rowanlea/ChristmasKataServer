@@ -75,7 +75,7 @@ public partial class Program;
 
 public static partial class TeamNames
 {
-    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9-]{0,23}$")]
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9-]{0,23}\z")]
     private static partial Regex Pattern();
 
     public static bool IsValid(string name) => Pattern().IsMatch(name);
