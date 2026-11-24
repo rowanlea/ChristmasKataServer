@@ -42,4 +42,13 @@ public sealed class ChallengeStore(TimeProvider time)
             return (TakeOutcome.Ok, entry.Challenge);
         }
     }
+
+    public void Release(Guid id)
+    {
+        lock (_gate)
+        {
+            if (_entries.TryGetValue(id, out var entry))
+                _entries[id] = (entry.Challenge, false);
+        }
+    }
 }

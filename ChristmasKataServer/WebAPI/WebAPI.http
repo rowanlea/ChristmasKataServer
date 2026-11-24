@@ -1,11 +1,64 @@
 @WebAPI_HostAddress = http://localhost:5289
+@TeamName = team-07
+@TeamSecret = replace-with-the-secret-from-register
+@ChallengeId = replace-with-a-challengeId
 
-GET {{WebAPI_HostAddress}}/register/team-07
+GET {{WebAPI_HostAddress}}/register/{{TeamName}}
 Accept: application/json
 
 ###
 
+POST {{WebAPI_HostAddress}}/puzzles/1.1/challenges
+X-Team-Name: {{TeamName}}
+X-Unique-Key: {{TeamSecret}}
+
+###
+
+POST {{WebAPI_HostAddress}}/challenges/{{ChallengeId}}/submission
+X-Team-Name: {{TeamName}}
+X-Unique-Key: {{TeamSecret}}
+Content-Type: image/png
+
+< ./render.png
+
+###
+
 GET {{WebAPI_HostAddress}}/leaderboard
+Accept: application/json
+
+###
+
+GET {{WebAPI_HostAddress}}/leaderboard/final
+X-Admin-Key: dev-admin-key
+
+###
+
+GET {{WebAPI_HostAddress}}/feed
+Accept: application/json
+
+###
+
+GET {{WebAPI_HostAddress}}/feed/events
+Accept: text/event-stream
+
+###
+
+GET {{WebAPI_HostAddress}}/shows/permission
+X-Team-Name: {{TeamName}}
+X-Unique-Key: {{TeamSecret}}
+
+###
+
+POST {{WebAPI_HostAddress}}/shows
+X-Team-Name: {{TeamName}}
+X-Unique-Key: {{TeamSecret}}
+Content-Type: application/json
+
+{ "frames": ["RGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKRGBWKR"] }
+
+###
+
+GET {{WebAPI_HostAddress}}/shows
 Accept: application/json
 
 ###

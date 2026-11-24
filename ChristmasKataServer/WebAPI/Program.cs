@@ -1,7 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WebAPI.API;
 using WebAPI.Database;
 using WebAPI.Kata.Puzzles;
@@ -30,7 +32,21 @@ else
 }
 
 builder.Services.AddSingleton<ChallengeStore>();
-builder.Services.Configure<EventOptions>(builder.Configuration.GetSection("Event"));
+builder.Services.AddOptions<EventOptions>()
+    .Bind(builder.Configuration.GetSection("Event"))
+    .Validate(o => o.FreezesAt != default, "Event:FreezesAt must be set")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.AdminKey), "Event:AdminKey must be set")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IChallengeGenerator, ChallengeGenerator>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+        await context.HttpContext.Response.WriteAsJsonAsync(new { error = "Too many requests, slow down" }, token);
+    AddTeamLimit(options, "challenges", 30);
+    AddTeamLimit(options, "submissions", 30);
+    AddTeamLimit(options, "shows", 10);
+});
 builder.Services.AddSingleton<EventClock>();
 builder.Services.AddSingleton<Feed>();
 
@@ -43,26 +59,12 @@ if (app.Services.GetService<CosmosParticipantRepository>() is { } cosmosReposito
     await cosmosRepository.EnsureCreated();
 }
 
+await app.Services.GetRequiredService<Feed>().InitialiseAsync(app.Services.GetRequiredService<IParticipantRepository>());
+
 app.UseMiddleware<AuthenticationMiddleware>();
+app.UseRateLimiter();
 
 app.UseHttpsRedirection();
-
-app.MapGet("/leaderboard", async (IParticipantRepository participantRepository) =>
-    {
-        var participants = await participantRepository.GetAllParticipants();
-        var leaderboard = participants.Select(x => new
-                {
-                    TeamName = x.TeamName,
-                    Score = x.BestCorrect.Sum(b => PuzzleCatalogue.Find(b.Key) is { } p
-                        ? Points.For(b.Value, p.Size * (p.Size + 1) / 2)
-                        : 0)
-                })
-        .OrderByDescending(x => x.Score)
-        .ToList();
-        return Results.Ok(leaderboard);
-    })
-.WithName("Leaderboard")
-.WithMetadata(new SkipTeamValidationAttribute());
 
 app.MapGet("/register/{teamName}", async (IParticipantRepository participantRepository, [FromRoute] string teamName) =>
 {
@@ -84,7 +86,21 @@ app.MapGet("/register/{teamName}", async (IParticipantRepository participantRepo
 .WithName("Register")
 .WithMetadata(new SkipTeamValidationAttribute());
 
+app.MapKataEndpoints();
+app.MapFeedEndpoints();
+app.MapShowEndpoints();
+
 app.Run();
+
+static void AddTeamLimit(RateLimiterOptions options, string policy, int permits) =>
+    options.AddPolicy(policy, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Request.Headers["X-Team-Name"].ToString(),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permits,
+            Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0,
+        }));
 
 public partial class Program;
 
