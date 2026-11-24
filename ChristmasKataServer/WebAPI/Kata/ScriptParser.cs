@@ -26,8 +26,8 @@ public static class ScriptParser
         for (var i = 0; i < lines.Length; i++)
         {
             var lineNumber = i + 1;
-            var line = lines[i].TrimEnd('\r');
-            if (line.Trim().Length == 0 || line.TrimStart().StartsWith('#')) continue;
+            var line = lines[i].Trim(' ', '\t', '\r');
+            if (line.Length == 0 || line.StartsWith('#')) continue;
             lastLine = lineNumber;
 
             var tokens = line.Split(' ');

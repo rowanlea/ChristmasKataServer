@@ -5,6 +5,29 @@ namespace Tests.Kata;
 public class ScriptParserTests
 {
     [Test]
+    public void Accepts_indented_block_bodies()
+    {
+        var indented = ScriptParser.Parse("SIZE 4\nREPEAT 2\n  CYCLE\n\tREPEAT 3 \n    CHASE\n  END\nEND\n");
+        var flat = ScriptParser.Parse("SIZE 4\nREPEAT 2\nCYCLE\nREPEAT 3\nCHASE\nEND\nEND");
+
+        var outer = (Repeat)indented.Body[0];
+        var flatOuter = (Repeat)flat.Body[0];
+        Assert.That(outer.Count, Is.EqualTo(flatOuter.Count));
+        Assert.That(outer.Body[0], Is.EqualTo(new Cycle()));
+        var inner = (Repeat)outer.Body[1];
+        Assert.That(inner.Count, Is.EqualTo(3));
+        Assert.That(inner.Body, Is.EqualTo(new Instruction[] { new Chase() }));
+    }
+
+    [Test]
+    public void Indented_comment_is_ignored()
+    {
+        var script = ScriptParser.Parse("SIZE 4\nREPEAT 1\n    # nothing here\nEND");
+
+        Assert.That(((Repeat)script.Body[0]).Body, Is.Empty);
+    }
+
+    [Test]
     public void Parses_nested_repeat()
     {
         var script = ScriptParser.Parse("SIZE 4\nREPEAT 3\nCYCLE\nREPEAT 2\nCHASE\nEND\nEND");
