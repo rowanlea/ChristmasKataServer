@@ -61,7 +61,8 @@ public sealed class Feed(EventClock clock)
         var frozen = clock.Frozen;
         lock (_gate)
         {
-            var banner = correct == BulbCount(p) ? DecideBanner(team, p) : null;
+            var decided = correct == BulbCount(p) ? DecideBanner(team, p) : null;
+            var banner = frozen ? null : decided;
             var tile = new Tile(team, p.Id, frozen ? null : correct, BulbCount(p), p.Size, sampledStates, banner);
             _latest.AddFirst(tile);
             while (_latest.Count > LatestCount) _latest.RemoveLast();

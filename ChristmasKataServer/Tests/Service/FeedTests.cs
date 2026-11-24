@@ -135,6 +135,20 @@ public class FeedTests
     }
 
     [Test]
+    public void Frozen_tile_has_no_banner()
+    {
+        var feed = NewFeed();
+        _time.SetUtcNow(Freeze);
+
+        var tile = Solve(feed, "alpha", "1.1");
+        _time.SetUtcNow(Freeze.AddHours(-1));
+        var later = Solve(feed, "beta", "1.1");
+
+        Assert.That(tile.Banner, Is.Null);
+        Assert.That(later.Banner, Is.Null);
+    }
+
+    [Test]
     public void Unfrozen_tile_carries_correct()
     {
         Assert.That(NewFeed().Publish("alpha", P("1.1"), 100, "R").Correct, Is.EqualTo(100));
