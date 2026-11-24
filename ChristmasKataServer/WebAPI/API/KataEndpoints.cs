@@ -5,26 +5,23 @@ using WebAPI.Service;
 
 namespace WebAPI.API;
 
-public sealed record LeaderboardEntry(string TeamName, int Total, Dictionary<string, int> Puzzles);
+public sealed record LeaderboardEntry(int Rank, string TeamName, int Total);
 
 public static class Leaderboard
 {
-    public static List<LeaderboardEntry> Build(IEnumerable<Participant> participants) =>
-        participants
-            .Select(participant =>
-            {
-                var best = participant.BestCorrect;
-                var puzzles = new Dictionary<string, int>();
-                foreach (var puzzle in PuzzleCatalogue.All)
-                {
-                    if (best.TryGetValue(puzzle.Id, out var correct))
-                        puzzles[puzzle.Id] = Points.For(correct, puzzle.Size * (puzzle.Size + 1) / 2);
-                }
-                return new LeaderboardEntry(participant.TeamName, puzzles.Values.Sum(), puzzles);
-            })
-            .OrderByDescending(entry => entry.Total)
-            .ThenBy(entry => entry.TeamName, StringComparer.Ordinal)
+    public static List<LeaderboardEntry> Build(IEnumerable<Participant> participants)
+    {
+        var totals = participants
+            .Select(participant => (participant.TeamName, Total: PuzzleCatalogue.All
+                .Where(puzzle => participant.BestCorrect.ContainsKey(puzzle.Id))
+                .Sum(puzzle => Points.For(participant.BestCorrect[puzzle.Id], puzzle.Size * (puzzle.Size + 1) / 2))))
+            .OrderByDescending(team => team.Total)
+            .ThenBy(team => team.TeamName, StringComparer.Ordinal)
             .ToList();
+        return totals
+            .Select(team => new LeaderboardEntry(1 + totals.Count(other => other.Total > team.Total), team.TeamName, team.Total))
+            .ToList();
+    }
 }
 
 public static class KataEndpoints
@@ -131,12 +128,15 @@ public static class KataEndpoints
             .RequireRateLimiting("submissions")
             .WithName("Submit");
 
-        app.MapGet("/leaderboard", async (LeaderboardCache leaderboard) => Results.Ok(await leaderboard.Public()))
+        app.MapGet("/leaderboard", async (HttpContext context, LeaderboardCache leaderboard) =>
+            {
+                var cached = await leaderboard.Current();
+                context.Response.Headers.ETag = cached.ETag;
+                if (context.Request.Headers.IfNoneMatch == cached.ETag)
+                    return Results.StatusCode(StatusCodes.Status304NotModified);
+                return Results.Bytes(cached.Json, "application/json");
+            })
             .WithName("Leaderboard")
-            .WithMetadata(new SkipTeamValidationAttribute());
-
-        app.MapGet("/ladder", async (LeaderboardCache leaderboard) => Results.Ok(await leaderboard.Ladder()))
-            .WithName("Ladder")
             .WithMetadata(new SkipTeamValidationAttribute());
     }
 }

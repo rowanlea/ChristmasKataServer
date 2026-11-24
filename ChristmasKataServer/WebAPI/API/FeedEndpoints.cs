@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using WebAPI.Service;
@@ -48,8 +49,8 @@ public static class FeedEndpoints
                                 await Send(context, "tile", added.Tile);
                                 break;
                             case LeaderboardChanged:
-                                await Send(context, "leaderboard", await leaderboard.Public());
-                                await Send(context, "ladder", await leaderboard.Ladder());
+                                var cached = await leaderboard.Current();
+                                await SendJson(context, "leaderboard", Encoding.UTF8.GetString(cached.Json));
                                 break;
                             case ShowAdded show:
                                 await Send(context, "show", new { teamName = show.TeamName, first = show.First });
@@ -66,7 +67,10 @@ public static class FeedEndpoints
     }
 
     private static Task Send(HttpContext context, string name, object data) =>
-        Write(context, $"event: {name}\ndata: {JsonSerializer.Serialize(data, Compact)}\n\n");
+        SendJson(context, name, JsonSerializer.Serialize(data, Compact));
+
+    private static Task SendJson(HttpContext context, string name, string json) =>
+        Write(context, $"event: {name}\ndata: {json}\n\n");
 
     private static async Task Write(HttpContext context, string text)
     {

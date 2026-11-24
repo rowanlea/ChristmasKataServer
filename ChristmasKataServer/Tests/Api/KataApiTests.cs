@@ -251,25 +251,31 @@ public class KataApiTests
         await _factory.UnlockThrough("team-07", "1.2");
         await _factory.UnlockThrough("team-08", "1.1");
 
-        var board = await Json(await _factory.CreateClient().GetAsync("/leaderboard"));
+        var teams = (await Json(await _factory.CreateClient().GetAsync("/leaderboard"))).GetProperty("teams");
 
-        Assert.That(board.GetArrayLength(), Is.EqualTo(2));
-        Assert.That(board[0].GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
-        Assert.That(board[0].GetProperty("total").GetInt32(), Is.EqualTo(200));
-        Assert.That(board[0].GetProperty("puzzles").GetProperty("1.2").GetInt32(), Is.EqualTo(100));
-        Assert.That(board[1].GetProperty("teamName").GetString(), Is.EqualTo("team-08"));
-        Assert.That(board[1].GetProperty("total").GetInt32(), Is.EqualTo(100));
+        Assert.That(teams.GetArrayLength(), Is.EqualTo(2));
+        Assert.That(teams[0].GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
+        Assert.That(teams[0].GetProperty("total").GetInt32(), Is.EqualTo(200));
+        Assert.That(teams[1].GetProperty("teamName").GetString(), Is.EqualTo("team-08"));
+        Assert.That(teams[1].GetProperty("total").GetInt32(), Is.EqualTo(100));
     }
 
     [Test]
-    public async Task Ladder_places_each_team_beside_its_current_level()
+    public async Task Leaderboard_returns_ranked_teams_and_ladder()
     {
         using var other = await _factory.RegisterTeam("team-08");
         await _factory.UnlockThrough("team-07", "1.2");
 
-        var ladder = await Json(await _factory.CreateClient().GetAsync("/ladder"));
+        var board = await Json(await _factory.CreateClient().GetAsync("/leaderboard"));
+        var first = board.GetProperty("teams")[0];
+        var ladder = board.GetProperty("ladder");
         var rungs = ladder.EnumerateArray().ToDictionary(r => r.GetProperty("level").GetString()!);
 
+        Assert.That(first.GetProperty("rank").GetInt32(), Is.EqualTo(1));
+        Assert.That(first.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
+        Assert.That(first.GetProperty("total").GetInt32(), Is.EqualTo(200));
+        Assert.That(first.TryGetProperty("puzzles", out _), Is.False);
+        Assert.That(board.GetProperty("teams")[1].GetProperty("rank").GetInt32(), Is.EqualTo(2));
         Assert.That(ladder.GetArrayLength(), Is.EqualTo(24));
         Assert.That(ladder[0].GetProperty("level").GetString(), Is.EqualTo("santa"));
         var on13 = rungs["1.3"].GetProperty("teams")[0];
@@ -277,6 +283,66 @@ public class KataApiTests
         Assert.That(on13.GetProperty("percent").GetInt32(), Is.EqualTo(0));
         Assert.That(rungs["1.1"].GetProperty("teams")[0].GetProperty("teamName").GetString(), Is.EqualTo("team-08"));
         Assert.That(rungs["1.1"].GetProperty("name").GetString(), Is.EqualTo("Paint by Numbers"));
+    }
+
+    [Test]
+    public async Task Leaderboard_is_compact_json()
+    {
+        var body = await _factory.CreateClient().GetStringAsync("/leaderboard");
+
+        Assert.That(body, Does.Not.Contain('\n'));
+    }
+
+    [Test]
+    public async Task Leaderboard_with_no_teams_is_empty_not_an_error()
+    {
+        using var factory = new KataApiFactory();
+
+        var response = await factory.CreateClient().GetAsync("/leaderboard");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await Json(response)).GetProperty("teams").GetArrayLength(), Is.EqualTo(0));
+        Assert.That(response.Headers.ETag, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task Leaderboard_answers_304_to_matching_If_None_Match()
+    {
+        using var client = _factory.CreateClient();
+        var first = await client.GetAsync("/leaderboard");
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/leaderboard");
+        request.Headers.IfNoneMatch.Add(first.Headers.ETag!);
+        var second = await client.SendAsync(request);
+
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
+        Assert.That(second.Headers.ETag, Is.EqualTo(first.Headers.ETag));
+    }
+
+    [Test]
+    public async Task Leaderboard_ETag_changes_after_a_new_score()
+    {
+        using var client = _factory.CreateClient();
+        var before = await client.GetAsync("/leaderboard");
+        KnownAnswerIsTree16Cycle();
+        var challenge = await Issue(_team, "1.1");
+        await Submit(_team, challenge, Fixture("tree-16-cycle.png"));
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/leaderboard");
+        request.Headers.IfNoneMatch.Add(before.Headers.ETag!);
+        var after = await client.SendAsync(request);
+
+        Assert.That(after.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(after.Headers.ETag, Is.Not.EqualTo(before.Headers.ETag));
+        Assert.That((await Json(after)).GetProperty("teams")[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
+    }
+
+    [Test]
+    public async Task Ladder_route_is_gone()
+    {
+        var response = await _factory.CreateClient().GetAsync("/ladder");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]
@@ -288,7 +354,7 @@ public class KataApiTests
         using var other = await _factory.RegisterTeam("team-08");
         var board = await Json(await anonymous.GetAsync("/leaderboard"));
 
-        Assert.That(board.EnumerateArray().Select(e => e.GetProperty("teamName").GetString()),
+        Assert.That(board.GetProperty("teams").EnumerateArray().Select(e => e.GetProperty("teamName").GetString()),
             Is.EquivalentTo(new[] { "team-07", "team-08" }));
     }
 

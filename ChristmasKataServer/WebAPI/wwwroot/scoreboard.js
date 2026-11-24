@@ -55,12 +55,10 @@ async function getJson(url) {
 
 function renderLeaderboard(entries) {
   const rows = [];
-  let rank = 0;
-  entries.forEach((entry, i) => {
-    if (i === 0 || entry.total !== entries[i - 1].total) rank = i + 1;
-    const li = el('li', rank <= 3 ? `place-${rank}` : '');
+  entries.forEach((entry) => {
+    const li = el('li', entry.rank <= 3 ? `place-${entry.rank}` : '');
     li.append(
-      el('span', 'rank', String(rank)),
+      el('span', 'rank', String(entry.rank)),
       el('span', 'team', entry.teamName),
       el('span', 'total', entry.total.toLocaleString('en-GB')),
     );
@@ -230,12 +228,15 @@ async function loadShows() {
 
 // Data
 
+function renderBoard(board) {
+  renderLeaderboard(board.teams);
+  renderLadder(board.ladder);
+}
+
 async function loadAll(announce) {
-  const [feed, leaderboard, ladder] = await Promise.all([
-    getJson('/feed'), getJson('/leaderboard'), getJson('/ladder'), loadShows()]);
+  const [feed, board] = await Promise.all([getJson('/feed'), getJson('/leaderboard'), loadShows()]);
   mergeFeed(feed.tiles, announce);
-  renderLeaderboard(leaderboard);
-  renderLadder(ladder);
+  renderBoard(board);
 }
 
 let pollTimer = null;
@@ -262,8 +263,7 @@ function listen() {
     startPolling();
   };
   events.addEventListener('tile', (e) => addTile(JSON.parse(e.data)));
-  events.addEventListener('leaderboard', (e) => renderLeaderboard(JSON.parse(e.data)));
-  events.addEventListener('ladder', (e) => renderLadder(JSON.parse(e.data)));
+  events.addEventListener('leaderboard', (e) => renderBoard(JSON.parse(e.data)));
   events.addEventListener('show', (e) => {
     const show = JSON.parse(e.data);
     if (show.first) queueBanner({ kind: 'show', text: `${show.teamName} has a light show!` });

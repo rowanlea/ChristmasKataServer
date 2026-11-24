@@ -67,12 +67,28 @@ public class FeedApiTests
 
         await SubmitPerfect();
 
-        var events = await ReadEvents(reader, "tile", "leaderboard", "ladder");
+        var events = await ReadEvents(reader, "tile");
         Assert.That(JsonDocument.Parse(events["tile"]).RootElement.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
-        Assert.That(JsonDocument.Parse(events["leaderboard"]).RootElement[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
-        var onTwo = JsonDocument.Parse(events["ladder"]).RootElement.EnumerateArray()
-            .Single(r => r.GetProperty("level").GetString() == "1.2");
+    }
+
+    [Test]
+    public async Task Leaderboard_event_carries_teams_and_ladder_and_no_ladder_event_is_sent()
+    {
+        using var client = _factory.CreateClient();
+        using var response = await client.GetAsync("/feed/events", HttpCompletionOption.ResponseHeadersRead);
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var reader = new StreamReader(stream);
+
+        await SubmitPerfect();
+
+        var names = await ReadEventNames(reader, until: "leaderboard");
+        var board = JsonDocument.Parse(names["leaderboard"]).RootElement;
+        Assert.That(board.GetProperty("teams")[0].GetProperty("rank").GetInt32(), Is.EqualTo(1));
+        Assert.That(board.GetProperty("teams")[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
+        var onTwo = board.GetProperty("ladder").EnumerateArray().Single(r => r.GetProperty("level").GetString() == "1.2");
         Assert.That(onTwo.GetProperty("teams")[0].GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
+        var after = await ReadEventNames(reader, until: null, quiet: TimeSpan.FromMilliseconds(500));
+        Assert.That(names.Keys.Concat(after.Keys), Has.No.Member("ladder"));
     }
 
     [Test]
@@ -84,19 +100,19 @@ public class FeedApiTests
         var readers = new List<StreamReader>();
         foreach (var r in responses) readers.Add(new StreamReader(await r.Content.ReadAsStreamAsync()));
         var empty = JsonDocument.Parse(await clients[0].GetStringAsync("/leaderboard")).RootElement;
-        Assert.That(empty[0].GetProperty("total").GetInt32(), Is.EqualTo(0));
+        Assert.That(empty.GetProperty("teams")[0].GetProperty("total").GetInt32(), Is.EqualTo(0));
         var before = _factory.Spy.AllTeamReads;
 
         await SubmitPerfect();
         foreach (var reader in readers)
         {
             var events = await ReadEvents(reader, "leaderboard");
-            Assert.That(JsonDocument.Parse(events["leaderboard"]).RootElement[0].GetProperty("total").GetInt32(),
+            Assert.That(JsonDocument.Parse(events["leaderboard"]).RootElement.GetProperty("teams")[0].GetProperty("total").GetInt32(),
                 Is.EqualTo(100));
         }
         var board = JsonDocument.Parse(await clients[0].GetStringAsync("/leaderboard")).RootElement;
 
-        Assert.That(board[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
+        Assert.That(board.GetProperty("teams")[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
         Assert.That(_factory.Spy.AllTeamReads - before, Is.EqualTo(1));
         foreach (var reader in readers) reader.Dispose();
         foreach (var r in responses) r.Dispose();
@@ -113,6 +129,27 @@ public class FeedApiTests
             var line = await reader.ReadLineAsync(timeout.Token) ?? throw new EndOfStreamException();
             if (line.StartsWith("event: ")) name = line["event: ".Length..];
             else if (line.StartsWith("data: ") && name is not null) found[name] = line["data: ".Length..];
+        }
+        return found;
+    }
+
+    private static async Task<Dictionary<string, string>> ReadEventNames(
+        StreamReader reader, string? until, TimeSpan? quiet = null)
+    {
+        var found = new Dictionary<string, string>();
+        using var timeout = new CancellationTokenSource(quiet ?? TimeSpan.FromSeconds(2));
+        string? name = null;
+        try
+        {
+            while (until is null || !found.ContainsKey(until))
+            {
+                var line = await reader.ReadLineAsync(timeout.Token) ?? throw new EndOfStreamException();
+                if (line.StartsWith("event: ")) name = line["event: ".Length..];
+                else if (line.StartsWith("data: ") && name is not null) found[name] = line["data: ".Length..];
+            }
+        }
+        catch (OperationCanceledException) when (quiet is not null)
+        {
         }
         return found;
     }

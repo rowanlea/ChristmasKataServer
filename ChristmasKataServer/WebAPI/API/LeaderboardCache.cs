@@ -1,24 +1,26 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using WebAPI.Service;
 
 namespace WebAPI.API;
 
+public sealed record LeaderboardSnapshot(List<LeaderboardEntry> Teams, List<LadderRung> Ladder);
+
+public sealed record CachedLeaderboard(byte[] Json, string ETag);
+
 public sealed class LeaderboardCache(IParticipantRepository repository)
 {
-    private sealed record Snapshot(List<LeaderboardEntry> Board, List<LadderRung> Ladder);
+    private static readonly JsonSerializerOptions Compact = new(JsonSerializerDefaults.Web);
 
     private readonly object _gate = new();
-    private Task<Snapshot>? _current;
-
-    public async Task<List<LeaderboardEntry>> Public() => (await Current()).Board;
-
-    public async Task<List<LadderRung>> Ladder() => (await Current()).Ladder;
+    private Task<CachedLeaderboard>? _current;
 
     public void Invalidate()
     {
         lock (_gate) _current = null;
     }
 
-    private Task<Snapshot> Current()
+    public Task<CachedLeaderboard> Current()
     {
         lock (_gate)
         {
@@ -27,9 +29,11 @@ public sealed class LeaderboardCache(IParticipantRepository repository)
         }
     }
 
-    private async Task<Snapshot> Build()
+    private async Task<CachedLeaderboard> Build()
     {
         var scores = (await repository.GetScores()).ToList();
-        return new Snapshot(Leaderboard.Build(scores), API.Ladder.Build(scores));
+        var snapshot = new LeaderboardSnapshot(Leaderboard.Build(scores), Ladder.Build(scores));
+        var json = JsonSerializer.SerializeToUtf8Bytes(snapshot, Compact);
+        return new CachedLeaderboard(json, "\"" + Convert.ToHexString(SHA256.HashData(json))[..16] + "\"");
     }
 }
