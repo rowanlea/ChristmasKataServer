@@ -36,16 +36,36 @@ public static class PngSampler
 
     private static SKBitmap Decode(ReadOnlySpan<byte> png)
     {
-        SKBitmap? bitmap = null;
+        if (png.IsEmpty) throw new InvalidImageException("Not a decodable PNG");
         try
         {
-            bitmap = png.IsEmpty ? null : SKBitmap.Decode(png);
+            using var stream = new SKMemoryStream(png.ToArray());
+            using var codec = SKCodec.Create(stream) ?? throw new InvalidImageException("Not a decodable PNG");
+            if (codec.EncodedFormat != SKEncodedImageFormat.Png
+                || codec.Info.Width != RenderLayout.Canvas || codec.Info.Height != RenderLayout.Canvas)
+                throw new InvalidImageException($"Image must be a {RenderLayout.Canvas} x {RenderLayout.Canvas} PNG");
+
+            var bitmap = new SKBitmap(new SKImageInfo(RenderLayout.Canvas, RenderLayout.Canvas, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+            try
+            {
+                if (codec.GetPixels(bitmap.Info, bitmap.GetPixels()) != SKCodecResult.Success)
+                    throw new InvalidImageException("PNG data is truncated or corrupt");
+                return bitmap;
+            }
+            catch
+            {
+                bitmap.Dispose();
+                throw;
+            }
         }
-        catch (Exception e) when (e is not OutOfMemoryException)
+        catch (InvalidImageException)
         {
-            bitmap = null;
+            throw;
         }
-        return bitmap ?? throw new InvalidImageException("Not a decodable PNG");
+        catch (Exception e)
+        {
+            throw new InvalidImageException($"Not a decodable PNG: {e.Message}");
+        }
     }
 
     private static char SnapAverage(SKColor[] pixels, double cx, double cy, double radius)
