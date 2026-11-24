@@ -4,10 +4,21 @@ namespace WebAPI.API;
 
 public sealed class LeaderboardCache(IParticipantRepository repository)
 {
-    private readonly object _gate = new();
-    private Task<List<LeaderboardEntry>>? _current;
+    private sealed record Snapshot(List<LeaderboardEntry> Board, List<LadderRung> Ladder);
 
-    public Task<List<LeaderboardEntry>> Public()
+    private readonly object _gate = new();
+    private Task<Snapshot>? _current;
+
+    public async Task<List<LeaderboardEntry>> Public() => (await Current()).Board;
+
+    public async Task<List<LadderRung>> Ladder() => (await Current()).Ladder;
+
+    public void Invalidate()
+    {
+        lock (_gate) _current = null;
+    }
+
+    private Task<Snapshot> Current()
     {
         lock (_gate)
         {
@@ -16,11 +27,9 @@ public sealed class LeaderboardCache(IParticipantRepository repository)
         }
     }
 
-    public void Invalidate()
+    private async Task<Snapshot> Build()
     {
-        lock (_gate) _current = null;
+        var scores = (await repository.GetScores()).ToList();
+        return new Snapshot(Leaderboard.Build(scores, live: false), API.Ladder.Build(scores));
     }
-
-    private async Task<List<LeaderboardEntry>> Build() =>
-        Leaderboard.Build(await repository.GetScores(), live: false);
 }

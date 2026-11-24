@@ -32,6 +32,7 @@ public class StaticPageTests
         Assert.That(html, Does.Contain("id=\"scoreboard\""));
         Assert.That(html, Does.Contain("id=\"feed\""));
         Assert.That(html, Does.Contain("id=\"shows\""));
+        Assert.That(html, Does.Contain("id=\"ladder\""));
     }
 
     [Test]

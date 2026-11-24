@@ -139,6 +139,10 @@ public static class KataEndpoints
             .WithName("Leaderboard")
             .WithMetadata(new SkipTeamValidationAttribute());
 
+        app.MapGet("/ladder", async (LeaderboardCache leaderboard) => Results.Ok(await leaderboard.Ladder()))
+            .WithName("Ladder")
+            .WithMetadata(new SkipTeamValidationAttribute());
+
         app.MapGet("/leaderboard/final", async (
                 HttpContext context, IParticipantRepository repository, IOptions<EventOptions> options) =>
             {

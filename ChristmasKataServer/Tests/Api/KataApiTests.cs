@@ -262,6 +262,24 @@ public class KataApiTests
     }
 
     [Test]
+    public async Task Ladder_places_each_team_beside_its_current_level()
+    {
+        using var other = await _factory.RegisterTeam("team-08");
+        await _factory.UnlockThrough("team-07", "1.2");
+
+        var ladder = await Json(await _factory.CreateClient().GetAsync("/ladder"));
+        var rungs = ladder.EnumerateArray().ToDictionary(r => r.GetProperty("level").GetString()!);
+
+        Assert.That(ladder.GetArrayLength(), Is.EqualTo(24));
+        Assert.That(ladder[0].GetProperty("level").GetString(), Is.EqualTo("santa"));
+        var on13 = rungs["1.3"].GetProperty("teams")[0];
+        Assert.That(on13.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
+        Assert.That(on13.GetProperty("percent").GetInt32(), Is.EqualTo(0));
+        Assert.That(rungs["1.1"].GetProperty("teams")[0].GetProperty("teamName").GetString(), Is.EqualTo("team-08"));
+        Assert.That(rungs["1.1"].GetProperty("name").GetString(), Is.EqualTo("Paint by Numbers"));
+    }
+
+    [Test]
     public async Task Leaderboard_shows_a_team_registered_after_it_was_last_built()
     {
         using var anonymous = _factory.CreateClient();

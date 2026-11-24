@@ -43,15 +43,19 @@ public static class FeedEndpoints
                             continue;
                         }
 
-                        var (name, data) = feedEvent switch
+                        switch (feedEvent)
                         {
-                            TileAdded added => ("tile", (object)added.Tile),
-                            LeaderboardChanged => ("leaderboard", await leaderboard.Public()),
-                            ShowAdded show => ("show", new { teamName = show.TeamName, first = show.First }),
-                            _ => ("", (object)""),
-                        };
-                        if (name.Length == 0) continue;
-                        await Write(context, $"event: {name}\ndata: {JsonSerializer.Serialize(data, Compact)}\n\n");
+                            case TileAdded added:
+                                await Send(context, "tile", added.Tile);
+                                break;
+                            case LeaderboardChanged:
+                                await Send(context, "leaderboard", await leaderboard.Public());
+                                await Send(context, "ladder", await leaderboard.Ladder());
+                                break;
+                            case ShowAdded show:
+                                await Send(context, "show", new { teamName = show.TeamName, first = show.First });
+                                break;
+                        }
                     }
                 }
                 catch (Exception e) when (e is OperationCanceledException or ChannelClosedException)
@@ -61,6 +65,9 @@ public static class FeedEndpoints
             .WithName("FeedEvents")
             .WithMetadata(new SkipTeamValidationAttribute());
     }
+
+    private static Task Send(HttpContext context, string name, object data) =>
+        Write(context, $"event: {name}\ndata: {JsonSerializer.Serialize(data, Compact)}\n\n");
 
     private static async Task Write(HttpContext context, string text)
     {

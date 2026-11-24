@@ -67,9 +67,12 @@ public class FeedApiTests
 
         await SubmitPerfect();
 
-        var events = await ReadEvents(reader, "tile", "leaderboard");
+        var events = await ReadEvents(reader, "tile", "leaderboard", "ladder");
         Assert.That(JsonDocument.Parse(events["tile"]).RootElement.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
         Assert.That(JsonDocument.Parse(events["leaderboard"]).RootElement[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
+        var onTwo = JsonDocument.Parse(events["ladder"]).RootElement.EnumerateArray()
+            .Single(r => r.GetProperty("level").GetString() == "1.2");
+        Assert.That(onTwo.GetProperty("teams")[0].GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
     }
 
     [Test]
