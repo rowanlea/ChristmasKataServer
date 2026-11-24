@@ -46,9 +46,23 @@ public class GenerationChecksTests
     }
 
     [Test]
-    public void Round_4_script_that_ignores_the_wiring_fails()
+    public void Round_4_chase_script_must_differ_a_lot_under_answer_order_wiring()
+    {
+        Assert.That(Check("4.2", Pattern + "REPEAT 3\nCHASE\nEND\n"), Has.Some.Contains("answer-order wiring"));
+        Assert.That(Check("4.2", Pattern + "REPEAT 37\nCHASE\nEND\n"), Is.Empty);
+    }
+
+    [Test]
+    public void Round_4_sequence_script_must_differ_under_answer_order_wiring()
     {
         Assert.That(Check("4.1", "SIZE 16\nFILL R\nSEQUENCE G\n"), Has.Some.Contains("answer-order wiring"));
+        Assert.That(Check("4.1", "SIZE 16\nSET 15 0 R\nSEQUENCE G\nSEQUENCE G\nSEQUENCE B\nSEQUENCE B\nSEQUENCE W\n"), Is.Empty);
+    }
+
+    [Test]
+    public void Round_4_fall_only_script_skips_the_wiring_check()
+    {
+        Assert.That(Check("4.3", "SIZE 16\nROW 3 R\nROW 9 G\nFALL\n"), Is.Empty);
     }
 
     [Test]

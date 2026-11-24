@@ -26,8 +26,8 @@ public static class GenerationChecks
             case 2 when SwapLeavesAnswerUnchanged(script, answer):
                 failures.Add("no adjacent transform pair is order-sensitive (swap)");
                 break;
-            case 4 when Similarity(answer, Rerun(script, Quirks.AnswerOrderWiring)) >= MaxSimilarity:
-                failures.Add("answer-order wiring scores 60% or more");
+            case 4 when WiringIsIndistinguishable(script, answer):
+                failures.Add("answer-order wiring scores too close to the answer");
                 break;
             case 5 when ExceedsInstructionBudget(script):
                 failures.Add($"brute force runs over {MaxBruteForceInstructions} instructions");
@@ -62,6 +62,15 @@ public static class GenerationChecks
         }
         if (puzzle.Id == "6.2" && result.Loops.Any(l => l.PrePeriod is < MinFalseStartPrePeriod))
             yield return $"pre-period shorter than {MinFalseStartPrePeriod}";
+    }
+
+    private static bool WiringIsIndistinguishable(Script script, Tree answer)
+    {
+        if (Contains<Chase>(script.Body))
+            return Similarity(answer, Rerun(script, Quirks.AnswerOrderWiring)) >= MaxSimilarity;
+        if (Contains<Sequence>(script.Body))
+            return Similarity(answer, Rerun(script, Quirks.AnswerOrderWiring)) >= 1.0;
+        return false;
     }
 
     private static bool IsAllOff(Tree tree) => tree.ToAnswerLine().All(c => c == 'K');
