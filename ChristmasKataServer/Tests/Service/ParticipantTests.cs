@@ -54,6 +54,14 @@ public class ParticipantTests
     }
 
     [Test]
+    public void MayShow_ignores_santa_full_marks_earned_after_the_freeze()
+    {
+        var p = New();
+        p.RecordScore(P("7.1"), 1176, true);
+        Assert.That(p.MayShow, Is.False);
+    }
+
+    [Test]
     public void RecordScore_after_freeze_leaves_public_unchanged()
     {
         var p = New();

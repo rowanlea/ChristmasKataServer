@@ -150,6 +150,20 @@ public class KataApiTests
     }
 
     [Test]
+    public async Task Submit_after_expiry_is_410_even_when_another_team_issued_meanwhile()
+    {
+        KnownAnswerIsTree16Cycle();
+        using var other = await _factory.RegisterTeam("team-08");
+        var challenge = await Issue(_team, "1.1");
+        _factory.Time.Advance(TimeSpan.FromMinutes(6));
+        await Issue(other, "1.1");
+
+        var response = await Submit(_team, challenge, Fixture("tree-16-cycle.png"));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Gone));
+    }
+
+    [Test]
     public async Task Submit_other_teams_challenge_is_404()
     {
         KnownAnswerIsTree16Cycle();

@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using WebAPI.Kata.Puzzles;
+using WebAPI.Service;
 
 namespace Tests.Api;
 
@@ -75,6 +78,26 @@ public class ShowApiTests
         var replaced = JsonDocument.Parse(await anonymous.GetStringAsync("/shows")).RootElement;
         Assert.That(replaced.GetArrayLength(), Is.EqualTo(1));
         Assert.That(replaced[0].GetProperty("frames").GetArrayLength(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Show_refused_when_santa_full_marks_came_after_the_freeze()
+    {
+        _factory.Time.SetUtcNow(KataApiFactory.FreezesAt.AddMinutes(1));
+        var repository = _factory.Services.GetRequiredService<IParticipantRepository>();
+        await repository.RecordScore("team-07", PuzzleCatalogue.Find("7.1")!, 1176, frozen: true);
+
+        Assert.That((await _team.GetAsync("/shows/permission")).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That((await _team.PostAsync("/shows", Body(Frame()))).StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
+    [Test]
+    public async Task Show_allowed_after_freeze_when_santa_full_marks_came_before()
+    {
+        await _factory.UnlockThrough("team-07", "7.1");
+        _factory.Time.SetUtcNow(KataApiFactory.FreezesAt.AddMinutes(1));
+
+        Assert.That((await _team.PostAsync("/shows", Body(Frame()))).StatusCode, Is.EqualTo(HttpStatusCode.Created));
     }
 
     [Test]

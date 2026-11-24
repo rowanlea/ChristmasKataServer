@@ -57,7 +57,7 @@ public record Participant
         get
         {
             var santa = PuzzleCatalogue.Find(SecretSantaId)!;
-            return BestCorrect.GetValueOrDefault(SecretSantaId) == BulbCount(santa);
+            return PublicBestCorrect.GetValueOrDefault(SecretSantaId) == BulbCount(santa);
         }
     }
 }

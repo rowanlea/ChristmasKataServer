@@ -10,6 +10,7 @@ public enum TakeOutcome { Ok, NotFound, AlreadySubmitted, Expired }
 public sealed class ChallengeStore(TimeProvider time)
 {
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan PurgeAfter = TimeSpan.FromHours(1);
 
     private readonly object _gate = new();
     private readonly Dictionary<Guid, (Challenge Challenge, bool Taken)> _entries = new();
@@ -20,7 +21,7 @@ public sealed class ChallengeStore(TimeProvider time)
         var challenge = new Challenge(Guid.NewGuid(), team, p.Id, p.Size, g.Answer, now + Lifetime);
         lock (_gate)
         {
-            foreach (var id in _entries.Where(e => e.Value.Challenge.ExpiresAt <= now).Select(e => e.Key).ToList())
+            foreach (var id in _entries.Where(e => e.Value.Challenge.ExpiresAt + PurgeAfter <= now).Select(e => e.Key).ToList())
                 _entries.Remove(id);
             _entries[challenge.Id] = (challenge, false);
         }

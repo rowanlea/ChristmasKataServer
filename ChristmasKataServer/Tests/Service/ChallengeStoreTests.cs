@@ -28,6 +28,26 @@ public class ChallengeStoreTests
     }
 
     [Test]
+    public void Expired_challenge_stays_Expired_after_another_team_issues()
+    {
+        var c = Issue("a");
+        _time.Advance(TimeSpan.FromMinutes(6));
+        Issue("b");
+
+        Assert.That(_store.Take(c.Id, "a").Item1, Is.EqualTo(TakeOutcome.Expired));
+    }
+
+    [Test]
+    public void Long_expired_challenges_are_purged()
+    {
+        var c = Issue("a");
+        _time.Advance(TimeSpan.FromHours(2));
+        Issue("b");
+
+        Assert.That(_store.Take(c.Id, "a").Item1, Is.EqualTo(TakeOutcome.NotFound));
+    }
+
+    [Test]
     public void Take_twice_is_AlreadySubmitted()
     {
         var c = Issue("a");
