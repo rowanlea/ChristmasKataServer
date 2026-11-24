@@ -207,7 +207,7 @@ function nextBanner() {
 
 // Light shows
 
-const SHOW_SIZE = 16;
+const SHOW_SIZE = 48;
 let shows = [];
 let showTeam = null;
 let showFrame = 0;

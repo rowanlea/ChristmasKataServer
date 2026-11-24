@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text.RegularExpressions;
+using WebAPI.API;
 
 namespace Tests.Api;
 
@@ -35,11 +37,25 @@ public class StaticPageTests
         Assert.That(html, Does.Contain("id=\"ladder\""));
     }
 
-    [Test]
-    public async Task Art_assets_are_served_without_auth()
+    [TestCase("/art/bulbs-16.json")]
+    [TestCase("/art/bulbs-48.json")]
+    [TestCase("/art/tree-16.png")]
+    [TestCase("/art/tree-48.png")]
+    public async Task Art_assets_are_served_without_auth(string path)
     {
-        var response = await _client.GetAsync("/art/bulbs-16.json");
+        var response = await _client.GetAsync(path);
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+    }
+
+    [Test]
+    public async Task Scoreboard_draws_shows_on_the_grid_the_server_accepts()
+    {
+        var script = await _client.GetStringAsync("/scoreboard.js");
+
+        var match = Regex.Match(script, @"const SHOW_SIZE = (\d+);");
+
+        Assert.That(match.Success, Is.True, "scoreboard.js must declare SHOW_SIZE");
+        Assert.That(int.Parse(match.Groups[1].Value), Is.EqualTo(ShowEndpoints.FrameRows));
     }
 }

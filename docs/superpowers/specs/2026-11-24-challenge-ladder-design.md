@@ -52,9 +52,10 @@ The big-screen scoreboard should show every challenge and how far each team has 
 
 **Data**
 
-- The ladder is built from the existing `/leaderboard` response: `teamName` plus `puzzles` holding the best score per puzzle.
+- The server builds the ladder in .NET (`Ladder.Build`) from each team's public best correct bulbs, and serves it at `GET /ladder` and as an SSE `ladder` event after each `leaderboard` event. The page only renders it.
+- The progress on a level is the percentage of bulbs correct, so the 80 % unlock point matches the unlock rule exactly.
 - The puzzle order is the fixed list 1.1–1.4, 2.1–2.4, 3.1–3.4, 4.1–4.4, 5.1–5.3, 6.1–6.3, 7.1.
-- It refreshes wherever the leaderboard refreshes now, on SSE events and polling fallback. Nothing changes on the server.
+- It refreshes wherever the leaderboard refreshes now, on SSE events and polling fallback.
 
 **Layout and look**
 
@@ -65,5 +66,5 @@ The big-screen scoreboard should show every challenge and how far each team has 
 ## Left to the builder
 
 - Exact spacing, colours and chip styling, within the impeccable pass.
-- Whether the ladder logic lives in a small `ladder.js` module imported by `scoreboard.js`. This is preferred because the placement rule is easy to unit test.
+- Decided during the build: the placement rule lives on the server, not in a `ladder.js` module, so there is one implementation and it is unit tested in .NET.
 - Tests: the level-placement rule, covering no scores, partial scores, exactly 80, a finished 7.1, and a score dropping below 80 on an earlier level being ignored because best scores never fall.

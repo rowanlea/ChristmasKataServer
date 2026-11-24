@@ -309,6 +309,22 @@ public class KataApiTests
     }
 
     [Test]
+    public async Task Ladder_frozen_ignores_post_freeze_scores()
+    {
+        var repository = _factory.Services.GetRequiredService<IParticipantRepository>();
+        var puzzle = WebAPI.Kata.Puzzles.PuzzleCatalogue.Find("1.1")!;
+        await repository.RecordScore("team-07", puzzle, 100, frozen: false);
+        await repository.RecordScore("team-07", puzzle, 136, frozen: true);
+
+        var ladder = await Json(await _factory.CreateClient().GetAsync("/ladder"));
+
+        var on11 = ladder.EnumerateArray().Single(r => r.GetProperty("level").GetString() == "1.1")
+            .GetProperty("teams")[0];
+        Assert.That(on11.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
+        Assert.That(on11.GetProperty("percent").GetInt32(), Is.EqualTo(73));
+    }
+
+    [Test]
     public async Task Final_leaderboard_without_or_with_wrong_key_is_401()
     {
         var anonymous = _factory.CreateClient();

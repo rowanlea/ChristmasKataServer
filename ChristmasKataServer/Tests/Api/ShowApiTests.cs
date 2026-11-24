@@ -29,7 +29,7 @@ public class ShowApiTests
         _factory.Dispose();
     }
 
-    private static string Frame(char c = 'R') => new(c, 136);
+    private static string Frame(char c = 'R') => new(c, 1176);
 
     private static HttpContent Body(params string[] frames) => JsonContent.Create(new { frames });
 
@@ -107,14 +107,18 @@ public class ShowApiTests
 
         var none = await _team.PostAsync("/shows", Body());
         var tooMany = await _team.PostAsync("/shows", Body(Enumerable.Repeat(Frame(), 501).ToArray()));
-        var short135 = await _team.PostAsync("/shows", Body(new string('R', 135)));
-        var badChar = await _team.PostAsync("/shows", Body(new string('X', 136)));
+        var oldSize = await _team.PostAsync("/shows", Body(new string('R', 136)));
+        var oneLong = await _team.PostAsync("/shows", Body(new string('R', 1177)));
+        var badChar = await _team.PostAsync("/shows", Body(new string('X', 1176)));
         var notJson = await _team.PostAsync("/shows", new StringContent("nope", Encoding.UTF8, "application/json"));
         var nullFrame = await _team.PostAsync("/shows", new StringContent("{\"frames\":[null]}", Encoding.UTF8, "application/json"));
 
         Assert.That(none.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(tooMany.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That(short135.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(oldSize.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(JsonDocument.Parse(await oldSize.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("error").GetString(), Is.EqualTo("each frame must be exactly 1176 characters from R, G, B, W, K"));
+        Assert.That(oneLong.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(badChar.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(notJson.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(nullFrame.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
@@ -133,10 +137,10 @@ public class ShowApiTests
     }
 
     [Test]
-    public async Task Show_over_256KiB_is_413()
+    public async Task Show_over_1MiB_is_413()
     {
         await _factory.UnlockThrough("team-07", "7.1");
-        var big = new ByteArrayContent(new byte[300 * 1024]);
+        var big = new ByteArrayContent(new byte[1100 * 1024]);
 
         var response = await _team.PostAsync("/shows", big);
 

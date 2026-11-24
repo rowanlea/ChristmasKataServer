@@ -1,5 +1,7 @@
 # Challenge Ladder Implementation Plan
 
+> **Superseded in part.** The ladder was built on the server instead of in `ladder.js`: `WebAPI/API/Ladder.cs` places the teams, `GET /ladder` and the SSE `ladder` event serve the rungs, and `scoreboard.js` only renders them. Progress is the percentage of bulbs correct. Task 1 below describes the original JavaScript approach and is kept for the record; see `docs/api.md` for the contract that shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a simple challenge ladder to the big-screen scoreboard, with the 23 challenges as levels and the team names beside each level.

@@ -1,14 +1,18 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using WebAPI.Kata.Puzzles;
 using WebAPI.Service;
 
 namespace WebAPI.API;
 
 public static class ShowEndpoints
 {
-    public const int MaxBodyBytes = 256 * 1024;
-    private const int FrameLength = 136;
-    private const int MaxFrames = 500;
+    public const int MaxBodyBytes = 1024 * 1024;
+    public const int MaxFrames = 500;
+
+    // Shows play on the same grid as Secret Santa, so the big screen draws every tree at one scale.
+    public static readonly int FrameRows = PuzzleCatalogue.Find("7.1")!.Size;
+    public static readonly int FrameLength = FrameRows * (FrameRows + 1) / 2;
     private const string SantaFirst = "Santa comes first: get full marks on 7.1 to unlock light shows";
 
     private sealed record ShowRequest(List<string?>? Frames);
@@ -30,7 +34,7 @@ public static class ShowEndpoints
 
                 var body = await Bodies.ReadBounded(context.Request, MaxBodyBytes, context.RequestAborted);
                 if (body is null)
-                    return Bodies.Error(StatusCodes.Status413PayloadTooLarge, "show must be at most 256 KiB");
+                    return Bodies.Error(StatusCodes.Status413PayloadTooLarge, "show must be at most 1 MiB");
 
                 ShowRequest? request;
                 try
@@ -69,6 +73,6 @@ public static class ShowEndpoints
             .WithMetadata(new SkipTeamValidationAttribute());
     }
 
-    private static bool IsFrame(string? frame) =>
-        frame is { Length: FrameLength } && frame.All(c => c is 'R' or 'G' or 'B' or 'W' or 'K');
+    public static bool IsFrame(string? frame) =>
+        frame is not null && frame.Length == FrameLength && frame.All(c => c is 'R' or 'G' or 'B' or 'W' or 'K');
 }
