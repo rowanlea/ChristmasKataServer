@@ -9,6 +9,8 @@ public sealed class SpyRepository(IParticipantRepository inner) : IParticipantRe
 
     public bool HideOnLookup { get; set; }
 
+    public bool FailRecordScore { get; set; }
+
     public int AllTeamReads => Volatile.Read(ref _allTeamReads);
 
     public Task<IEnumerable<Participant>> GetAllParticipants()
@@ -31,7 +33,9 @@ public sealed class SpyRepository(IParticipantRepository inner) : IParticipantRe
     public Task<bool> ParticipantExists(string teamName, string teamSecret) => inner.ParticipantExists(teamName, teamSecret);
 
     public Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen) =>
-        inner.RecordScore(teamName, puzzle, correct, frozen);
+        FailRecordScore
+            ? throw new InvalidOperationException("storage unavailable")
+            : inner.RecordScore(teamName, puzzle, correct, frozen);
 
     public Task<bool> SaveShow(string teamName, Show show) => inner.SaveShow(teamName, show);
 }

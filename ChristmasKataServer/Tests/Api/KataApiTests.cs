@@ -217,6 +217,34 @@ public class KataApiTests
     }
 
     [Test]
+    public async Task Unexpected_failure_is_500_with_an_error_body()
+    {
+        _factory.Generator.Override = new ThrowingGenerator();
+
+        var response = await _team.PostAsync("/puzzles/1.1/challenges", null);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That((await Json(response)).GetProperty("error").GetString(), Is.EqualTo("internal error"));
+    }
+
+    [Test]
+    public async Task Failed_score_write_releases_the_challenge()
+    {
+        KnownAnswerIsTree16Cycle();
+        var challenge = await Issue(_team, "1.1");
+        _factory.Spy.FailRecordScore = true;
+
+        var failed = await Submit(_team, challenge, Fixture("tree-16-cycle.png"));
+        _factory.Spy.FailRecordScore = false;
+        var retried = await Submit(_team, challenge, Fixture("tree-16-cycle.png"));
+
+        Assert.That(failed.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That((await Json(failed)).GetProperty("error").GetString(), Is.EqualTo("internal error"));
+        Assert.That(retried.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await BestFor("team-07", "1.1"), Is.EqualTo(136));
+    }
+
+    [Test]
     public async Task Leaderboard_sums_best_points_per_puzzle()
     {
         using var other = await _factory.RegisterTeam("team-08");

@@ -76,6 +76,12 @@ public sealed class SwitchableGenerator : IChallengeGenerator
         (Override ?? _real).Generate(puzzle, rng);
 }
 
+public sealed class ThrowingGenerator : IChallengeGenerator
+{
+    public GeneratedChallenge Generate(Puzzle puzzle, Random rng) =>
+        throw new InvalidOperationException("no challenge after 50 attempts");
+}
+
 public sealed class FixedAnswerGenerator(string answerLine, int size) : IChallengeGenerator
 {
     public GeneratedChallenge Generate(Puzzle puzzle, Random rng) =>

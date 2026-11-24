@@ -62,6 +62,8 @@ if (app.Services.GetService<CosmosParticipantRepository>() is { } cosmosReposito
 
 await app.Services.GetRequiredService<Feed>().InitialiseAsync(app.Services.GetRequiredService<IParticipantRepository>());
 
+app.UseExceptionHandler(handler => handler.Run(context =>
+    context.Response.WriteAsJsonAsync(new { error = "internal error" })));
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseMiddleware<AuthenticationMiddleware>();

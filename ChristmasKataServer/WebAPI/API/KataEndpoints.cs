@@ -108,7 +108,16 @@ public static class KataEndpoints
                 var correct = Enumerable.Range(0, bulbCount).Count(i => sampled[i] == expected[i]);
 
                 var frozen = clock.Frozen;
-                var (_, update) = await repository.RecordScore(team, puzzle, correct, frozen);
+                ScoreUpdate update;
+                try
+                {
+                    (_, update) = await repository.RecordScore(team, puzzle, correct, frozen);
+                }
+                catch
+                {
+                    store.Release(id);
+                    throw;
+                }
                 if (!frozen) leaderboard.Invalidate();
                 feed.Publish(team, puzzle, correct, sampled, frozen);
 
