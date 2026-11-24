@@ -5,8 +5,10 @@ public interface IChallengeGenerator
     GeneratedChallenge Generate(Puzzle puzzle, Random rng);
 }
 
-public sealed class ChallengeGenerator : IChallengeGenerator
+public sealed class ChallengeGenerator(long instructionBudget = ChallengeGenerator.DefaultInstructionBudget)
+    : IChallengeGenerator
 {
+    public const long DefaultInstructionBudget = 2_000_000;
     private const int MaxAttempts = 50;
 
     public GeneratedChallenge Generate(Puzzle puzzle, Random rng)
@@ -15,7 +17,15 @@ public sealed class ChallengeGenerator : IChallengeGenerator
         {
             var text = puzzle.Template(rng);
             var script = ScriptParser.Parse(text);
-            var result = new Emulator().Run(script);
+            RunResult result;
+            try
+            {
+                result = new Emulator(new EmulatorOptions(InstructionBudget: instructionBudget)).Run(script);
+            }
+            catch (InstructionBudgetExceededException)
+            {
+                continue;
+            }
             if (GenerationChecks.Failures(puzzle, script, result).Count == 0)
                 return new GeneratedChallenge(text, result.Final);
         }

@@ -1,12 +1,24 @@
+using WebAPI.Kata.Puzzles.Templates;
+
 namespace WebAPI.Kata.Puzzles;
 
 public static class PuzzleCatalogue
 {
+    private static readonly Dictionary<string, Func<Random, string>> Templates = new()
+    {
+        ["1.1"] = Round1.P11, ["1.2"] = Round1.P12, ["1.3"] = Round1.P13, ["1.4"] = Round1.P14,
+        ["2.1"] = Round2.P21, ["2.2"] = Round2.P22, ["2.3"] = Round2.P23, ["2.4"] = Round2.P24,
+        ["3.1"] = Round3.P31, ["3.2"] = Round3.P32, ["3.3"] = Round3.P33, ["3.4"] = Round3.P34,
+        ["4.1"] = Round4.P41, ["4.2"] = Round4.P42, ["4.3"] = Round4.P43, ["4.4"] = Round4.P44,
+        ["5.1"] = Round5.P51, ["5.2"] = Round5.P52, ["5.3"] = Round5.P53,
+    };
+
     private static Puzzle Make(string id, string name)
     {
         var round = int.Parse(id[..id.IndexOf('.')]);
-        return new Puzzle(id, name, round, id == "7.1" ? 48 : 16,
-            _ => throw new NotImplementedException($"Template {id} is not written yet"));
+        var template = Templates.GetValueOrDefault(id)
+            ?? (_ => throw new NotImplementedException($"Template {id} is not written yet"));
+        return new Puzzle(id, name, round, id == "7.1" ? 48 : 16, template);
     }
 
     public static IReadOnlyList<Puzzle> All { get; } =

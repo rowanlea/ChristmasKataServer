@@ -44,12 +44,6 @@ public class CatalogueTests
     }
 
     [Test]
-    public void Templates_are_placeholders_until_written()
-    {
-        Assert.Throws<NotImplementedException>(() => PuzzleCatalogue.All[0].Template(new Random(1)));
-    }
-
-    [Test]
     public void Generator_gives_up_after_50_attempts()
     {
         var calls = 0;
@@ -61,6 +55,29 @@ public class CatalogueTests
 
         Assert.Throws<InvalidOperationException>(() => new ChallengeGenerator().Generate(puzzle, new Random(1)));
         Assert.That(calls, Is.EqualTo(50));
+    }
+
+    [Test]
+    public void Generator_counts_a_script_over_the_instruction_budget_as_a_failed_attempt()
+    {
+        var calls = 0;
+        var puzzle = new Puzzle("1.1", "x", 1, 16, _ => ++calls == 1
+            ? new ScriptBuilder().Size(16).RandomSet(new Random(1), 50).ToString()
+            : "SIZE 16\nSET 3 2 R\n");
+
+        var challenge = new ChallengeGenerator(instructionBudget: 10).Generate(puzzle, new Random(1));
+
+        Assert.That(calls, Is.EqualTo(2));
+        Assert.That(challenge.Answer[3, 2], Is.EqualTo(Bulb.R));
+    }
+
+    [Test]
+    public void Generator_gives_up_when_every_attempt_exceeds_the_budget()
+    {
+        var puzzle = new Puzzle("1.1", "x", 1, 16, _ => new ScriptBuilder().Size(16).RandomSet(new Random(1), 50).ToString());
+
+        Assert.Throws<InvalidOperationException>(
+            () => new ChallengeGenerator(instructionBudget: 10).Generate(puzzle, new Random(1)));
     }
 
     [Test]
