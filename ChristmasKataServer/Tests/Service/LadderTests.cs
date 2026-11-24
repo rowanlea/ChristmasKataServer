@@ -9,7 +9,7 @@ public class LadderTests
     private static Participant Team(string name, params (string Puzzle, int Correct)[] scores)
     {
         var p = new Participant { Id = name, TeamName = name, UserSecret = "s" };
-        foreach (var (puzzle, correct) in scores) p.PublicBestCorrect[puzzle] = correct;
+        foreach (var (puzzle, correct) in scores) p.BestCorrect[puzzle] = correct;
         return p;
     }
 

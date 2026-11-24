@@ -82,7 +82,7 @@ public class RegistrationTests
     {
         var response = await _client.GetAsync("/register/");
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
     [Test]

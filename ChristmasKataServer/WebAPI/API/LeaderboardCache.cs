@@ -30,6 +30,6 @@ public sealed class LeaderboardCache(IParticipantRepository repository)
     private async Task<Snapshot> Build()
     {
         var scores = (await repository.GetScores()).ToList();
-        return new Snapshot(Leaderboard.Build(scores, live: false), API.Ladder.Build(scores));
+        return new Snapshot(Leaderboard.Build(scores), API.Ladder.Build(scores));
     }
 }

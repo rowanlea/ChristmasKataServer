@@ -11,7 +11,7 @@ public class FeedTests
 
     private static int Full(string id) => P(id).Size * (P(id).Size + 1) / 2;
 
-    private static Tile Solve(Feed feed, string team, string id) => feed.Publish(team, P(id), Full(id), "R", frozen: false);
+    private static Tile Solve(Feed feed, string team, string id) => feed.Publish(team, P(id), Full(id), "R");
 
     private static List<string> Round1() => PuzzleCatalogue.InRound(1).Select(p => p.Id).ToList();
 
@@ -30,7 +30,7 @@ public class FeedTests
     [Test]
     public void Partial_marks_get_no_banner()
     {
-        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1") - 1, "R", frozen: false);
+        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1") - 1, "R");
 
         Assert.That(tile.Banner, Is.Null);
     }
@@ -81,7 +81,7 @@ public class FeedTests
     {
         var feed = NewFeed();
 
-        for (var i = 0; i < 10; i++) feed.Publish($"team-{i}", P("1.1"), 1, "R", frozen: false);
+        for (var i = 0; i < 10; i++) feed.Publish($"team-{i}", P("1.1"), 1, "R");
 
         Assert.That(feed.Latest.Select(t => t.TeamName),
             Is.EqualTo(Enumerable.Range(2, 8).Reverse().Select(i => $"team-{i}")));
@@ -92,7 +92,7 @@ public class FeedTests
     {
         var repo = new ParticipantRepository();
         await repo.Create("veteran");
-        await repo.RecordScore("veteran", P("1.1"), Full("1.1"), true);
+        await repo.RecordScore("veteran", P("1.1"), Full("1.1"));
         var feed = NewFeed();
 
         await feed.InitialiseAsync(repo);
@@ -106,7 +106,7 @@ public class FeedTests
         var repo = new ParticipantRepository();
         await repo.Create("veteran");
         var ids = Round1();
-        foreach (var id in ids) await repo.RecordScore("veteran", P(id), Full(id), false);
+        foreach (var id in ids) await repo.RecordScore("veteran", P(id), Full(id));
         var feed = NewFeed();
         await feed.InitialiseAsync(repo);
 
@@ -117,23 +117,30 @@ public class FeedTests
     }
 
     [Test]
-    public void Frozen_tile_has_null_correct()
+    public void Tile_always_carries_correct_and_banner()
     {
-        Assert.That(NewFeed().Publish("alpha", P("1.1"), 100, "R", frozen: true).Correct, Is.Null);
+        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1"), "R");
+
+        Assert.That(tile.Correct, Is.EqualTo(Full("1.1")));
+        Assert.That(tile.Banner, Is.Not.Null);
     }
 
     [Test]
-    public void Frozen_tile_has_no_banner()
+    public async Task Every_score_broadcasts_LeaderboardChanged()
     {
-        var tile = NewFeed().Publish("alpha", P("1.1"), Full("1.1"), "R", frozen: true);
+        var feed = NewFeed();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var reader = feed.Subscribe(cts.Token);
 
-        Assert.That(tile.Banner, Is.Null);
-    }
+        feed.Publish("alpha", P("1.1"), 5, "R");
+        feed.Publish("beta", P("1.1"), 6, "R");
 
-    [Test]
-    public void Unfrozen_tile_carries_correct()
-    {
-        Assert.That(NewFeed().Publish("alpha", P("1.1"), 100, "R", frozen: false).Correct, Is.EqualTo(100));
+        var events = new[]
+        {
+            await reader.ReadAsync(cts.Token), await reader.ReadAsync(cts.Token),
+            await reader.ReadAsync(cts.Token), await reader.ReadAsync(cts.Token),
+        };
+        Assert.That(events.OfType<LeaderboardChanged>().Count(), Is.EqualTo(2));
     }
 
     [Test]
@@ -143,26 +150,12 @@ public class FeedTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var reader = feed.Subscribe(cts.Token);
 
-        var tile = feed.Publish("alpha", P("1.1"), 5, "R", frozen: false);
+        var tile = feed.Publish("alpha", P("1.1"), 5, "R");
         feed.PublishShow("alpha", true);
 
         Assert.That(await reader.ReadAsync(cts.Token), Is.EqualTo(new TileAdded(tile)));
         Assert.That(await reader.ReadAsync(cts.Token), Is.EqualTo(new LeaderboardChanged()));
         Assert.That(await reader.ReadAsync(cts.Token), Is.EqualTo(new ShowAdded("alpha", true)));
-    }
-
-    [Test]
-    public async Task After_freeze_no_leaderboard_events_but_shows_flow()
-    {
-        var feed = NewFeed();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var reader = feed.Subscribe(cts.Token);
-
-        feed.Publish("alpha", P("1.1"), 5, "R", frozen: true);
-        feed.PublishShow("alpha", false);
-
-        Assert.That(await reader.ReadAsync(cts.Token), Is.TypeOf<TileAdded>());
-        Assert.That(await reader.ReadAsync(cts.Token), Is.EqualTo(new ShowAdded("alpha", false)));
     }
 
     [Test]

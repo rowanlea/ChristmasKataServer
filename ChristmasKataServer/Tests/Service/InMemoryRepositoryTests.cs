@@ -13,7 +13,7 @@ public class InMemoryRepositoryTests
         var puzzle = PuzzleCatalogue.Find("1.1")!;
 
         await Task.WhenAll(Enumerable.Range(1, 50)
-            .Select(n => Task.Run(() => repo.RecordScore("team", puzzle, n, false))));
+            .Select(n => Task.Run(() => repo.RecordScore("team", puzzle, n))));
 
         var p = await repo.GetParticipantBy("team");
         Assert.That(p!.BestCorrect["1.1"], Is.EqualTo(50));
@@ -39,7 +39,7 @@ public class InMemoryRepositoryTests
     {
         var repo = new ParticipantRepository();
         await repo.Create("team");
-        var (held, _) = await repo.RecordScore("team", PuzzleCatalogue.All[0], 1, false);
+        var (held, _) = await repo.RecordScore("team", PuzzleCatalogue.All[0], 1);
         var heldCount = held.BestCorrect.Count;
         var done = false;
 
@@ -53,7 +53,7 @@ public class InMemoryRepositoryTests
         {
             for (var i = 0; i < 200; i++)
                 foreach (var puzzle in PuzzleCatalogue.All)
-                    await repo.RecordScore("team", puzzle, i + w, i % 2 == 0);
+                    await repo.RecordScore("team", puzzle, i + w);
         })));
 
         await writers;
@@ -83,15 +83,14 @@ public class InMemoryRepositoryTests
     {
         var repo = new ParticipantRepository();
         await repo.Create("team");
-        await repo.RecordScore("team", PuzzleCatalogue.Find("1.1")!, 120, false);
-        await repo.RecordScore("team", PuzzleCatalogue.Find("1.1")!, 136, true);
+        await repo.RecordScore("team", PuzzleCatalogue.Find("1.1")!, 120);
+        await repo.RecordScore("team", PuzzleCatalogue.Find("1.1")!, 136);
         await repo.SaveShow("team", new Show(["A"], DateTimeOffset.UnixEpoch));
 
         var score = (await repo.GetScores()).Single();
 
         Assert.That(score.TeamName, Is.EqualTo("team"));
         Assert.That(score.BestCorrect["1.1"], Is.EqualTo(136));
-        Assert.That(score.PublicBestCorrect["1.1"], Is.EqualTo(120));
         Assert.That(score.Show, Is.Null);
         Assert.That(score.UserSecret, Is.Null);
     }

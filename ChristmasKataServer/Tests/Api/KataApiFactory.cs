@@ -13,10 +13,6 @@ namespace Tests.Api;
 
 public class KataApiFactory : WebApplicationFactory<Program>
 {
-    public const string AdminKey = "test-admin-key";
-
-    public static readonly DateTimeOffset FreezesAt = new(2026, 12, 10, 20, 45, 0, TimeSpan.Zero);
-
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 12, 10, 18, 0, 0, TimeSpan.Zero));
 
     public SwitchableGenerator Generator { get; } = new();
@@ -29,8 +25,6 @@ public class KataApiFactory : WebApplicationFactory<Program>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Storage:Provider"] = "InMemory",
-                ["Event:FreezesAt"] = FreezesAt.ToString("o"),
-                ["Event:AdminKey"] = AdminKey,
             }));
 
         builder.ConfigureServices(services =>
@@ -60,7 +54,7 @@ public class KataApiFactory : WebApplicationFactory<Program>
         var repository = Services.GetRequiredService<IParticipantRepository>();
         foreach (var puzzle in PuzzleCatalogue.All)
         {
-            await repository.RecordScore(team, puzzle, puzzle.Size * (puzzle.Size + 1) / 2, false);
+            await repository.RecordScore(team, puzzle, puzzle.Size * (puzzle.Size + 1) / 2);
             if (puzzle.Id == puzzleId) return;
         }
     }

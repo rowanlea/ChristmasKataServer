@@ -37,7 +37,7 @@ public static class Ladder
         foreach (var puzzle in PuzzleCatalogue.All)
         {
             var bulbs = puzzle.Size * (puzzle.Size + 1) / 2;
-            var correct = participant.PublicBestCorrect.GetValueOrDefault(puzzle.Id);
+            var correct = participant.BestCorrect.GetValueOrDefault(puzzle.Id);
             if (!Points.Passes(correct, bulbs)) return (puzzle.Id, 100 * correct / bulbs);
         }
         return (Santa, 100);

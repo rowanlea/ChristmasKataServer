@@ -21,7 +21,6 @@ public class ParticipantRepository : IParticipantRepository
                 Id = p.Id,
                 TeamName = p.TeamName,
                 BestCorrect = p.BestCorrect,
-                PublicBestCorrect = p.PublicBestCorrect,
             })
             .ToList());
     }
@@ -55,12 +54,12 @@ public class ParticipantRepository : IParticipantRepository
         return Task.FromResult(participant!.UserSecret == teamSecret);
     }
 
-    public Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen)
+    public Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct)
     {
         var participant = Require(teamName);
         lock (_locks.GetOrAdd(teamName, _ => new object()))
         {
-            var update = participant.RecordScore(puzzle, correct, frozen);
+            var update = participant.RecordScore(puzzle, correct);
             return Task.FromResult((Copy(participant), update));
         }
     }
@@ -88,7 +87,6 @@ public class ParticipantRepository : IParticipantRepository
     private static Participant Copy(Participant p) => p with
     {
         BestCorrect = new Dictionary<string, int>(p.BestCorrect),
-        PublicBestCorrect = new Dictionary<string, int>(p.PublicBestCorrect),
     };
 
     private Participant Require(string teamName) =>

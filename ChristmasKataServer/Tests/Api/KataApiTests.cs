@@ -293,50 +293,10 @@ public class KataApiTests
     }
 
     [Test]
-    public async Task Leaderboard_frozen_hides_post_freeze_scores()
+    public async Task Final_leaderboard_route_is_gone()
     {
-        var repository = _factory.Services.GetRequiredService<IParticipantRepository>();
-        var puzzle = WebAPI.Kata.Puzzles.PuzzleCatalogue.Find("1.1")!;
-        await repository.RecordScore("team-07", puzzle, 120, frozen: false);
-        await repository.RecordScore("team-07", puzzle, 136, frozen: true);
-        var anonymous = _factory.CreateClient();
+        var response = await _factory.CreateClient().GetAsync("/leaderboard/final");
 
-        var publicBoard = await Json(await anonymous.GetAsync("/leaderboard"));
-        Assert.That(publicBoard[0].GetProperty("total").GetInt32(), Is.EqualTo(56));
-
-        var finalBoard = await Json(await AdminGet(anonymous, "/leaderboard/final", KataApiFactory.AdminKey));
-        Assert.That(finalBoard[0].GetProperty("total").GetInt32(), Is.EqualTo(100));
-    }
-
-    [Test]
-    public async Task Ladder_frozen_ignores_post_freeze_scores()
-    {
-        var repository = _factory.Services.GetRequiredService<IParticipantRepository>();
-        var puzzle = WebAPI.Kata.Puzzles.PuzzleCatalogue.Find("1.1")!;
-        await repository.RecordScore("team-07", puzzle, 100, frozen: false);
-        await repository.RecordScore("team-07", puzzle, 136, frozen: true);
-
-        var ladder = await Json(await _factory.CreateClient().GetAsync("/ladder"));
-
-        var on11 = ladder.EnumerateArray().Single(r => r.GetProperty("level").GetString() == "1.1")
-            .GetProperty("teams")[0];
-        Assert.That(on11.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
-        Assert.That(on11.GetProperty("percent").GetInt32(), Is.EqualTo(73));
-    }
-
-    [Test]
-    public async Task Final_leaderboard_without_or_with_wrong_key_is_401()
-    {
-        var anonymous = _factory.CreateClient();
-
-        Assert.That((await anonymous.GetAsync("/leaderboard/final")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-        Assert.That((await AdminGet(anonymous, "/leaderboard/final", "nope")).StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-    }
-
-    private static Task<HttpResponseMessage> AdminGet(HttpClient client, string url, string key)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("X-Admin-Key", key);
-        return client.SendAsync(request);
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 }

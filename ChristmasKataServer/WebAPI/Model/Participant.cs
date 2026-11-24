@@ -20,8 +20,6 @@ public record Participant
 
     public Dictionary<string, int> BestCorrect { get; set; } = new();
 
-    public Dictionary<string, int> PublicBestCorrect { get; set; } = new();
-
     public Show? Show { get; set; }
 
     [JsonProperty(PropertyName = "_etag")]
@@ -31,15 +29,12 @@ public record Participant
 
     private static int BulbCount(Puzzle p) => p.Size * (p.Size + 1) / 2;
 
-    public ScoreUpdate RecordScore(Puzzle puzzle, int correct, bool frozen)
+    public ScoreUpdate RecordScore(Puzzle puzzle, int correct)
     {
         var bulbs = BulbCount(puzzle);
         var before = BestCorrect.GetValueOrDefault(puzzle.Id);
         var best = Math.Max(before, correct);
         BestCorrect[puzzle.Id] = best;
-
-        if (!frozen)
-            PublicBestCorrect[puzzle.Id] = Math.Max(PublicBestCorrect.GetValueOrDefault(puzzle.Id), correct);
 
         var opened = !Points.Passes(before, bulbs) && Points.Passes(best, bulbs);
         return new ScoreUpdate(Points.For(best, bulbs), opened ? PuzzleCatalogue.Next(puzzle) : null);
@@ -57,7 +52,7 @@ public record Participant
         get
         {
             var santa = PuzzleCatalogue.Find(SecretSantaId)!;
-            return PublicBestCorrect.GetValueOrDefault(SecretSantaId) == BulbCount(santa);
+            return BestCorrect.GetValueOrDefault(SecretSantaId) == BulbCount(santa);
         }
     }
 }

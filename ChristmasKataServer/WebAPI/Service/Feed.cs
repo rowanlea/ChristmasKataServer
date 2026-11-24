@@ -5,7 +5,7 @@ namespace WebAPI.Service;
 
 public sealed record Banner(string Kind, string Text);
 
-public sealed record Tile(string TeamName, string Puzzle, int? Correct, int BulbCount, int Size, string States, Banner? Banner);
+public sealed record Tile(string TeamName, string Puzzle, int Correct, int BulbCount, int Size, string States, Banner? Banner);
 
 public abstract record FeedEvent;
 
@@ -56,18 +56,17 @@ public sealed class Feed
         }
     }
 
-    public Tile Publish(string team, Puzzle p, int correct, string sampledStates, bool frozen)
+    public Tile Publish(string team, Puzzle p, int correct, string sampledStates)
     {
         lock (_gate)
         {
-            var decided = correct == BulbCount(p) ? DecideBanner(team, p) : null;
-            var banner = frozen ? null : decided;
-            var tile = new Tile(team, p.Id, frozen ? null : correct, BulbCount(p), p.Size, sampledStates, banner);
+            var banner = correct == BulbCount(p) ? DecideBanner(team, p) : null;
+            var tile = new Tile(team, p.Id, correct, BulbCount(p), p.Size, sampledStates, banner);
             _latest.AddFirst(tile);
             while (_latest.Count > LatestCount) _latest.RemoveLast();
 
             Broadcast(new TileAdded(tile));
-            if (!frozen) Broadcast(new LeaderboardChanged());
+            Broadcast(new LeaderboardChanged());
             return tile;
         }
     }

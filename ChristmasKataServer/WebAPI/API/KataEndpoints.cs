@@ -1,7 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using WebAPI.Kata.Puzzles;
 using WebAPI.Scoring;
 using WebAPI.Service;
@@ -12,11 +9,11 @@ public sealed record LeaderboardEntry(string TeamName, int Total, Dictionary<str
 
 public static class Leaderboard
 {
-    public static List<LeaderboardEntry> Build(IEnumerable<Participant> participants, bool live) =>
+    public static List<LeaderboardEntry> Build(IEnumerable<Participant> participants) =>
         participants
             .Select(participant =>
             {
-                var best = live ? participant.BestCorrect : participant.PublicBestCorrect;
+                var best = participant.BestCorrect;
                 var puzzles = new Dictionary<string, int>();
                 foreach (var puzzle in PuzzleCatalogue.All)
                 {
@@ -70,7 +67,7 @@ public static class KataEndpoints
 
         app.MapPost("/challenges/{challengeId}/submission", async (
                 string challengeId, HttpContext context, IParticipantRepository repository,
-                ChallengeStore store, EventClock clock, Feed feed, LeaderboardCache leaderboard) =>
+                ChallengeStore store, Feed feed, LeaderboardCache leaderboard) =>
             {
                 var team = Bodies.Team(context);
                 var png = await Bodies.ReadBounded(context.Request, MaxPngBytes, context.RequestAborted);
@@ -107,19 +104,18 @@ public static class KataEndpoints
                 var expected = challenge.Answer.ToAnswerLine();
                 var correct = Enumerable.Range(0, bulbCount).Count(i => sampled[i] == expected[i]);
 
-                var frozen = clock.Frozen;
                 ScoreUpdate update;
                 try
                 {
-                    (_, update) = await repository.RecordScore(team, puzzle, correct, frozen);
+                    (_, update) = await repository.RecordScore(team, puzzle, correct);
                 }
                 catch
                 {
                     store.Release(id);
                     throw;
                 }
-                if (!frozen) leaderboard.Invalidate();
-                feed.Publish(team, puzzle, correct, sampled, frozen);
+                leaderboard.Invalidate();
+                feed.Publish(team, puzzle, correct, sampled);
 
                 return Results.Ok(new
                 {
@@ -141,19 +137,6 @@ public static class KataEndpoints
 
         app.MapGet("/ladder", async (LeaderboardCache leaderboard) => Results.Ok(await leaderboard.Ladder()))
             .WithName("Ladder")
-            .WithMetadata(new SkipTeamValidationAttribute());
-
-        app.MapGet("/leaderboard/final", async (
-                HttpContext context, IParticipantRepository repository, IOptions<EventOptions> options) =>
-            {
-                var supplied = Encoding.UTF8.GetBytes(context.Request.Headers["X-Admin-Key"].ToString());
-                var expected = Encoding.UTF8.GetBytes(options.Value.AdminKey);
-                if (supplied.Length == 0 || !CryptographicOperations.FixedTimeEquals(supplied, expected))
-                    return Bodies.Error(StatusCodes.Status401Unauthorized, "Invalid admin key");
-
-                return Results.Ok(Leaderboard.Build(await repository.GetScores(), live: true));
-            })
-            .WithName("FinalLeaderboard")
             .WithMetadata(new SkipTeamValidationAttribute());
     }
 }

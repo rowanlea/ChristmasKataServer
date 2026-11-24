@@ -11,8 +11,7 @@ public static class FeedEndpoints
 
     public static void MapFeedEndpoints(this WebApplication app)
     {
-        app.MapGet("/feed", (Feed feed, EventClock clock) =>
-                Results.Ok(new { frozen = clock.Frozen, tiles = feed.Latest }))
+        app.MapGet("/feed", (Feed feed) => Results.Ok(new { tiles = feed.Latest }))
             .WithName("Feed")
             .WithMetadata(new SkipTeamValidationAttribute());
 

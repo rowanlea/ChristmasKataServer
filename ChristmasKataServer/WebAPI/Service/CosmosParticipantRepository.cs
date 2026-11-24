@@ -16,7 +16,7 @@ public class CosmosParticipantRepository : IParticipantRepository
     public Task<IEnumerable<Participant>> GetAllParticipants() => Query("SELECT * FROM c");
 
     public Task<IEnumerable<Participant>> GetScores() =>
-        Query("SELECT c.id, c.teamName, c.BestCorrect, c.PublicBestCorrect FROM c");
+        Query("SELECT c.id, c.teamName, c.BestCorrect FROM c");
 
     private async Task<IEnumerable<Participant>> Query(string query)
     {
@@ -81,10 +81,10 @@ public class CosmosParticipantRepository : IParticipantRepository
         await database.CreateContainerIfNotExistsAsync(new ContainerProperties(_container.Id, "/id"));
     }
 
-    public async Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen)
+    public async Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct)
     {
         ScoreUpdate? update = null;
-        var participant = await ReadModifyReplace(teamName, p => update = p.RecordScore(puzzle, correct, frozen));
+        var participant = await ReadModifyReplace(teamName, p => update = p.RecordScore(puzzle, correct));
         return (participant, update!);
     }
 

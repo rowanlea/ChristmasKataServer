@@ -14,8 +14,8 @@ public class AuthenticationMiddleware
     public async Task InvokeAsync(HttpContext context, IParticipantRepository repository)
     {
         var endpoint = context.GetEndpoint();
-        
-        if (endpoint?.Metadata.GetMetadata<SkipTeamValidationAttribute>() != null)
+
+        if (endpoint is null || endpoint.Metadata.GetMetadata<SkipTeamValidationAttribute>() != null)
         {
             await _next(context);
             return;

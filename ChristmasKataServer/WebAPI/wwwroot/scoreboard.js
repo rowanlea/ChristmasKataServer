@@ -4,7 +4,6 @@ const MAX_TILES = 8;
 const BANNER_MS = 6000;
 const SHOW_FRAME_MS = 100;
 const POLL_MS = 5000;
-const FREEZE_CHECK_MS = 30000;
 const ENLARGED = new Set(['first-full-marks', 'secret-santa']);
 
 const $ = (id) => document.getElementById(id);
@@ -12,7 +11,6 @@ const scoreboardEl = $('scoreboard');
 const scoreboardEmptyEl = $('scoreboard-empty');
 const feedEl = $('feed');
 const feedEmptyEl = $('feed-empty');
-const frozenEl = $('frozen');
 const statusEl = $('status');
 const bannerEl = $('banner');
 const bannerTreeEl = $('banner-tree');
@@ -53,22 +51,9 @@ async function getJson(url) {
   return res.json();
 }
 
-// Freeze
-
-let frozen = false;
-
-function freeze() {
-  if (frozen) return;
-  frozen = true;
-  frozenEl.hidden = false;
-  for (const count of feedEl.querySelectorAll('.count')) count.hidden = true;
-}
-
 // Leaderboard
 
-// After the freeze the board keeps what it showed, unless it has shown nothing yet.
 function renderLeaderboard(entries) {
-  if (frozen && scoreboardEl.children.length > 0) return;
   const rows = [];
   let rank = 0;
   entries.forEach((entry, i) => {
@@ -90,7 +75,6 @@ function renderLeaderboard(entries) {
 
 // The server places each team; this only draws the rungs it sends, top rung first.
 function renderLadder(rungs) {
-  if (frozen && ladderEl.children.length > 0) return;
   ladderEl.replaceChildren(...rungs.map((rung) => {
     const santa = rung.level === 'santa';
     const li = el('li', santa ? 'rung santa' : 'rung');
@@ -133,7 +117,7 @@ function tileEl(tile, isNew) {
   const caption = el('div', 'caption');
   const count = el('span', 'count', `${tile.correct}/${tile.bulbCount}`);
   if (tile.correct === tile.bulbCount) count.classList.add('full');
-  count.hidden = frozen || tile.correct === null;
+  count.hidden = tile.correct === null;
   caption.append(el('span', 'team', tile.teamName), el('span', 'puzzle', tile.puzzle), count);
   li.append(canvas, caption);
   li.addEventListener('animationend', () => li.classList.remove('new'), { once: true });
@@ -142,7 +126,6 @@ function tileEl(tile, isNew) {
 }
 
 function addTile(tile) {
-  if (tile.correct === null) freeze();
   const first = feedEl.firstElementChild;
   feedEl.prepend(tileEl(tile, true));
   shownTiles = [tile, ...shownTiles].slice(0, MAX_TILES);
@@ -164,7 +147,6 @@ function mergeFeed(tiles, announce) {
   shownTiles = tiles;
   feedEl.replaceChildren(...tiles.map((t, i) => tileEl(t, fresh[i])));
   feedEmptyEl.hidden = tiles.length > 0;
-  if (tiles.some((t) => t.correct === null)) freeze();
   for (let i = tiles.length - 1; i >= 0; i--) {
     if (fresh[i] && tiles[i].banner) queueBanner({ ...tiles[i].banner, tile: tiles[i] });
   }
@@ -251,7 +233,6 @@ async function loadShows() {
 async function loadAll(announce) {
   const [feed, leaderboard, ladder] = await Promise.all([
     getJson('/feed'), getJson('/leaderboard'), getJson('/ladder'), loadShows()]);
-  if (feed.frozen) freeze();
   mergeFeed(feed.tiles, announce);
   renderLeaderboard(leaderboard);
   renderLadder(ladder);
@@ -290,19 +271,6 @@ function listen() {
   });
 }
 
-// The server sends no event when scores freeze, so check now and then while
-// the event stream is up; the polling fallback already reads /feed.
-let freezeTimer = null;
-
-async function checkFreeze() {
-  if (frozen) {
-    clearInterval(freezeTimer);
-    return;
-  }
-  if (pollTimer !== null) return;
-  if ((await getJson('/feed')).frozen) freeze();
-}
-
 async function start() {
   try {
     await loadAll(false);
@@ -310,7 +278,6 @@ async function start() {
     statusEl.textContent = 'server unreachable';
   }
   setInterval(tickShow, SHOW_FRAME_MS);
-  freezeTimer = setInterval(() => checkFreeze().catch(() => {}), FREEZE_CHECK_MS);
   listen();
 }
 

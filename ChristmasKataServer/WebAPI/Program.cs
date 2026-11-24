@@ -32,11 +32,6 @@ else
 }
 
 builder.Services.AddSingleton<ChallengeStore>();
-builder.Services.AddOptions<EventOptions>()
-    .Bind(builder.Configuration.GetSection("Event"))
-    .Validate(o => o.FreezesAt != default, "Event:FreezesAt must be set")
-    .Validate(o => !string.IsNullOrWhiteSpace(o.AdminKey), "Event:AdminKey must be set")
-    .ValidateOnStart();
 builder.Services.AddSingleton<IChallengeGenerator, ChallengeGenerator>();
 builder.Services.AddRateLimiter(options =>
 {
@@ -47,7 +42,6 @@ builder.Services.AddRateLimiter(options =>
     AddTeamLimit(options, "submissions", 30);
     AddTeamLimit(options, "shows", 10);
 });
-builder.Services.AddSingleton<EventClock>();
 builder.Services.AddSingleton<Feed>();
 builder.Services.AddSingleton<LeaderboardCache>();
 

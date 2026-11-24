@@ -12,6 +12,6 @@ public interface IParticipantRepository
     /// <returns>The new team secret, or null when the name is already taken.</returns>
     Task<string?> Create(string teamName);
     Task<bool> ParticipantExists(string teamName, string teamSecret);
-    Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen);
+    Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct);
     Task<bool> SaveShow(string teamName, Show show);
 }

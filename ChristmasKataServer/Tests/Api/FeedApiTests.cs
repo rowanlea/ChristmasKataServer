@@ -45,7 +45,7 @@ public class FeedApiTests
 
         var feed = JsonDocument.Parse(await _factory.CreateClient().GetStringAsync("/feed")).RootElement;
 
-        Assert.That(feed.GetProperty("frozen").GetBoolean(), Is.False);
+        Assert.That(feed.TryGetProperty("frozen", out _), Is.False);
         var tile = feed.GetProperty("tiles")[0];
         Assert.That(tile.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
         Assert.That(tile.GetProperty("puzzle").GetString(), Is.EqualTo("1.1"));
