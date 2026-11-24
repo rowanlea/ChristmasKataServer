@@ -12,7 +12,8 @@ public enum Quirks
 public sealed record EmulatorOptions(
     Quirks Quirks = Quirks.None,
     bool DetectCycles = true,
-    long? InstructionBudget = null);
+    long? InstructionBudget = null,
+    bool PermutationShortcut = true);
 
 public sealed class InstructionBudgetExceededException(long budget)
     : Exception($"Run exceeded the budget of {budget} steps");
@@ -62,7 +63,7 @@ public sealed class Emulator(EmulatorOptions? options = null)
                 Loops.Add(new LoopStats(repeat.Count, null, null));
             }
 
-            if (options.DetectCycles && repeat.Count > 0 && TryRepeatBijection(repeat, slot)) return;
+            if (options.DetectCycles && options.PermutationShortcut && repeat.Count > 0 && TryRepeatBijection(repeat, slot)) return;
 
             var detecting = options.DetectCycles;
             var visited = new Dictionary<string, long>();

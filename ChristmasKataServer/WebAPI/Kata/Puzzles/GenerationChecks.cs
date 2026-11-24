@@ -15,10 +15,10 @@ public static class GenerationChecks
         if (IsAllOff(answer)) failures.Add("final tree drains to empty (all-K)");
 
         if (Contains<Rotate>(script.Body)
-            && Similarity(answer, Rerun(script, Quirks.CounterClockwiseRotate)) >= MaxSimilarity)
+            && WrongRunSimilarity(puzzle, answer, Rerun(script, Quirks.CounterClockwiseRotate)) >= MaxSimilarity)
             failures.Add("wrong rotation scores 60% or more");
         if (Contains<Mirror>(script.Body)
-            && Similarity(answer, Rerun(script, Quirks.MirrorWrongAxis)) >= MaxSimilarity)
+            && WrongRunSimilarity(puzzle, answer, Rerun(script, Quirks.MirrorWrongAxis)) >= MaxSimilarity)
             failures.Add("wrong mirror axis scores 60% or more");
 
         switch (puzzle.Round)
@@ -51,6 +51,23 @@ public static class GenerationChecks
         for (var i = 0; i < x.Length; i++)
             if (x[i] == y[i]) equal++;
         return (double)equal / x.Length;
+    }
+
+    /// <summary>Secret Santa is mostly background green, so its wrong runs are compared over the scene bulbs only.</summary>
+    private static double WrongRunSimilarity(Puzzle puzzle, Tree answer, Tree wrong)
+    {
+        if (puzzle.Id != "7.1") return Similarity(answer, wrong);
+        var x = answer.ToAnswerLine();
+        var y = wrong.ToAnswerLine();
+        var scene = 0;
+        var equal = 0;
+        for (var i = 0; i < x.Length; i++)
+        {
+            if (x[i] == 'G') continue;
+            scene++;
+            if (x[i] == y[i]) equal++;
+        }
+        return scene == 0 ? 1.0 : (double)equal / scene;
     }
 
     private static IEnumerable<string> RoundSixFailures(Puzzle puzzle, RunResult result)

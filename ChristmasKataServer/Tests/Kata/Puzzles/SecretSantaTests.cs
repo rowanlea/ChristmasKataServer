@@ -72,4 +72,25 @@ public class SecretSantaTests
         Assert.That(SecretSanta.OrbitPeriod(tree, [new Chase()], 5), Is.EqualTo(-1));
         Assert.That(SecretSanta.OrbitPeriod(tree, [new Chase()], 10), Is.EqualTo(10));
     }
+
+    [Test]
+    public void Secret_santa_generates_through_the_generator_with_both_transforms()
+    {
+        var puzzle = PuzzleCatalogue.Find("7.1")!;
+        for (var seed = 1; seed <= 10; seed++)
+        {
+            var clock = Stopwatch.StartNew();
+            var challenge = new ChallengeGenerator().Generate(puzzle, new Random(seed));
+            var script = ScriptParser.Parse(challenge.Script);
+            var result = new Emulator().Run(script);
+            clock.Stop();
+
+            var loops = script.Body.OfType<Repeat>().SelectMany(r => r.Body).ToList();
+            Assert.That(loops.OfType<Rotate>(), Is.Not.Empty, $"seed {seed}");
+            Assert.That(loops.OfType<Mirror>(), Is.Not.Empty, $"seed {seed}");
+            Assert.That(result.Final.ToAnswerLine(), Is.EqualTo(challenge.Answer.ToAnswerLine()), $"seed {seed}");
+            Assert.That(clock.Elapsed.TotalSeconds, Is.LessThan(5), $"seed {seed}");
+            TestContext.Out.WriteLine($"seed {seed}: {clock.ElapsedMilliseconds} ms");
+        }
+    }
 }

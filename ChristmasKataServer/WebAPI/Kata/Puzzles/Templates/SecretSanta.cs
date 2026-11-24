@@ -57,8 +57,8 @@ public static class SecretSanta
         var picture = Picture(rng);
         while (true)
         {
-            var l2 = Body(rng);
-            var l1 = Body(rng);
+            var l2 = Body(rng, "MIRROR");
+            var l1 = Body(rng, "ROTATE");
             var c2 = rng.NextInt64(MinCount, MaxCount + 1);
             var c1 = rng.NextInt64(MinCount, MaxCount + 1);
 
@@ -89,11 +89,12 @@ public static class SecretSanta
         return new Emulator(new EmulatorOptions(DetectCycles: false)).Run(script, target).Final;
     }
 
-    private static IReadOnlyList<Instruction> Body(Random rng)
+    /// <summary>2-4 instructions that always include a CHASE and the required transform.</summary>
+    private static IReadOnlyList<Instruction> Body(Random rng, string required)
     {
-        var ops = new string[rng.Next(2, 5)];
-        for (var i = 0; i < ops.Length; i++) ops[i] = BodyOps[rng.Next(BodyOps.Length)];
-        if (!ops.Contains("CHASE")) ops[rng.Next(ops.Length)] = "CHASE";
+        var ops = new List<string> { "CHASE", required };
+        for (var extra = rng.Next(0, 3); extra > 0; extra--) ops.Add(BodyOps[rng.Next(BodyOps.Length)]);
+        Paint.Shuffle(rng, ops);
         return ops.Select(ToInstruction).ToList();
     }
 
