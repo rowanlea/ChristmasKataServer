@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hack the Halls</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="scoreboard.css">
+  <script type="module" src="scoreboard.js"></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Hack the Halls</h1>
+    <span id="frozen" class="frozen" hidden>Scores frozen</span>
+    <span id="status" class="status">connecting</span>
+  </header>
+  <main class="board">
+    <section class="panel standings" aria-labelledby="standings-title">
+      <h2 id="standings-title">Leaderboard</h2>
+      <ol id="scoreboard" class="scoreboard"></ol>
+      <p id="scoreboard-empty" class="empty">No scores yet</p>
+    </section>
+    <div class="right">
+      <section class="panel feed-panel" aria-labelledby="feed-title">
+        <h2 id="feed-title">Latest trees</h2>
+        <ol id="feed" class="feed"></ol>
+        <p id="feed-empty" class="empty">Waiting for the first tree</p>
+        <div id="banner" class="banner" hidden>
+          <canvas id="banner-tree" class="banner-tree" hidden></canvas>
+          <p id="banner-text" class="banner-text"></p>
+        </div>
+      </section>
+      <section id="shows" class="panel shows" aria-labelledby="shows-title">
+        <canvas id="show-tree" class="show-tree"></canvas>
+        <div class="show-info">
+          <h2 id="shows-title">Light shows</h2>
+          <p id="show-team" class="show-team"></p>
+          <p id="show-progress" class="show-progress"></p>
+          <p id="shows-empty" class="empty">Find Santa on 7.1 to unlock a light show</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

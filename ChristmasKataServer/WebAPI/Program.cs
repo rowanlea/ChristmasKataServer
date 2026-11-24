@@ -61,6 +61,8 @@ if (app.Services.GetService<CosmosParticipantRepository>() is { } cosmosReposito
 
 await app.Services.GetRequiredService<Feed>().InitialiseAsync(app.Services.GetRequiredService<IParticipantRepository>());
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseMiddleware<AuthenticationMiddleware>();
 app.UseRateLimiter();
 
