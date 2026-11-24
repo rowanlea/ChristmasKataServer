@@ -21,6 +21,7 @@ const showTreeEl = $('show-tree');
 const showTeamEl = $('show-team');
 const showProgressEl = $('show-progress');
 const showsEmptyEl = $('shows-empty');
+const ladderEl = $('ladder');
 
 const artCache = new Map();
 function artFor(size) {
@@ -83,6 +84,42 @@ function renderLeaderboard(entries) {
   scoreboardEl.style.setProperty('--rows', String(Math.max(12, entries.length)));
   scoreboardEl.replaceChildren(...rows);
   scoreboardEmptyEl.hidden = entries.length > 0;
+}
+
+// Ladder
+
+// The server places each team; this only draws the rungs it sends, top rung first.
+function renderLadder(rungs) {
+  if (frozen && ladderEl.children.length > 0) return;
+  ladderEl.replaceChildren(...rungs.map((rung) => {
+    const santa = rung.level === 'santa';
+    const li = el('li', santa ? 'rung santa' : 'rung');
+    li.dataset.round = santa ? '8' : rung.level.split('.')[0];
+    li.classList.toggle('occupied', rung.teams.length > 0);
+    const label = el('span', 'level', santa ? rung.name : rung.level);
+    const teams = el('span', 'teams');
+    teams.append(...rung.teams.map((team) => {
+      const chip = el('span', 'chip', team.teamName);
+      chip.style.setProperty('--percent', String(team.percent));
+      chip.title = `${team.teamName}: ${team.percent}%`;
+      return chip;
+    }));
+    if (santa) li.append(label, teams);
+    else li.append(label, el('span', 'name', rung.name), teams);
+    return li;
+  }));
+  fitLadder();
+}
+
+// Many teams on one rung wrap onto extra lines; shrink the ladder text until
+// every rung fits the panel rather than clipping the bottom rungs.
+function fitLadder() {
+  let fit = 1;
+  ladderEl.style.setProperty('--fit', '1');
+  while (ladderEl.scrollHeight > ladderEl.clientHeight && fit > 0.6) {
+    fit -= 0.05;
+    ladderEl.style.setProperty('--fit', fit.toFixed(2));
+  }
 }
 
 // Feed
@@ -212,10 +249,12 @@ async function loadShows() {
 // Data
 
 async function loadAll(announce) {
-  const [feed, leaderboard] = await Promise.all([getJson('/feed'), getJson('/leaderboard'), loadShows()]);
+  const [feed, leaderboard, ladder] = await Promise.all([
+    getJson('/feed'), getJson('/leaderboard'), getJson('/ladder'), loadShows()]);
   if (feed.frozen) freeze();
   mergeFeed(feed.tiles, announce);
   renderLeaderboard(leaderboard);
+  renderLadder(ladder);
 }
 
 let pollTimer = null;
@@ -243,6 +282,7 @@ function listen() {
   };
   events.addEventListener('tile', (e) => addTile(JSON.parse(e.data)));
   events.addEventListener('leaderboard', (e) => renderLeaderboard(JSON.parse(e.data)));
+  events.addEventListener('ladder', (e) => renderLadder(JSON.parse(e.data)));
   events.addEventListener('show', (e) => {
     const show = JSON.parse(e.data);
     if (show.first) queueBanner({ kind: 'show', text: `${show.teamName} has a light show!` });
@@ -273,5 +313,7 @@ async function start() {
   freezeTimer = setInterval(() => checkFreeze().catch(() => {}), FREEZE_CHECK_MS);
   listen();
 }
+
+window.addEventListener('resize', fitLadder);
 
 start();
