@@ -30,6 +30,9 @@ else
 }
 
 builder.Services.AddSingleton<ChallengeStore>();
+builder.Services.Configure<EventOptions>(builder.Configuration.GetSection("Event"));
+builder.Services.AddSingleton<EventClock>();
+builder.Services.AddSingleton<Feed>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
