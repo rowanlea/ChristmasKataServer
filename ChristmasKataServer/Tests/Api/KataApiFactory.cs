@@ -21,6 +21,8 @@ public class KataApiFactory : WebApplicationFactory<Program>
 
     public SwitchableGenerator Generator { get; } = new();
 
+    public SpyRepository Spy => Services.GetRequiredService<SpyRepository>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((_, config) =>
@@ -35,6 +37,10 @@ public class KataApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Time);
+            services.RemoveAll<IParticipantRepository>();
+            services.AddSingleton<ParticipantRepository>();
+            services.AddSingleton(sp => new SpyRepository(sp.GetRequiredService<ParticipantRepository>()));
+            services.AddSingleton<IParticipantRepository>(sp => sp.GetRequiredService<SpyRepository>());
             services.RemoveAll<IChallengeGenerator>();
             services.AddSingleton<IChallengeGenerator>(Generator);
         });

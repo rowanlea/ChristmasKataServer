@@ -43,6 +43,19 @@ public class RegistrationTests
         Assert.That(second, Is.Not.EqualTo(first));
     }
 
+    [Test]
+    public async Task Register_race_on_the_same_name_is_400()
+    {
+        await _client.GetAsync("/register/team-07");
+        _factory.Spy.HideOnLookup = true;
+
+        var second = await _client.GetAsync("/register/team-07");
+
+        Assert.That(second.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await second.Content.ReadFromJsonAsync<Dictionary<string, string>>(),
+            Is.EqualTo(new Dictionary<string, string> { ["error"] = "Team name already exists" }));
+    }
+
     [TestCase("%3Cscript%3E")]
     [TestCase("%20")]
     [TestCase("a%20b")]

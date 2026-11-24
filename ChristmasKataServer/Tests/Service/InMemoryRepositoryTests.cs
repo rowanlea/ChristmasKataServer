@@ -65,4 +65,16 @@ public class InMemoryRepositoryTests
         var now = await repo.GetParticipantBy("team");
         Assert.That(now!.BestCorrect.Count, Is.EqualTo(PuzzleCatalogue.All.Count));
     }
+
+    [Test]
+    public async Task Create_on_a_taken_name_returns_null_and_keeps_the_first_secret()
+    {
+        var repo = new ParticipantRepository();
+        var first = await repo.Create("team");
+
+        var second = await repo.Create("team");
+
+        Assert.That(second, Is.Null);
+        Assert.That(await repo.ParticipantExists("team", first!), Is.True);
+    }
 }

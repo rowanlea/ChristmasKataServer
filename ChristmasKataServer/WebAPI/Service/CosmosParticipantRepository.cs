@@ -43,7 +43,7 @@ public class CosmosParticipantRepository : IParticipantRepository
         return results.FirstOrDefault();
     }
 
-    public async Task<string> Create(string teamName)
+    public async Task<string?> Create(string teamName)
     {
         var userSecret = TeamSecrets.New();
         var participant = new Participant
@@ -53,8 +53,15 @@ public class CosmosParticipantRepository : IParticipantRepository
             UserSecret = userSecret,
         };
 
-        var result = await _container.CreateItemAsync(participant, new PartitionKey(teamName));
-        return result.Resource.UserSecret;
+        try
+        {
+            var result = await _container.CreateItemAsync(participant, new PartitionKey(teamName));
+            return result.Resource.UserSecret;
+        }
+        catch (CosmosException e) when (e.StatusCode == HttpStatusCode.Conflict)
+        {
+            return null;
+        }
     }
 
     public async Task<bool> ParticipantExists(string teamName, string teamSecret)

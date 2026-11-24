@@ -76,14 +76,11 @@ app.MapGet("/register/{teamName}", async (IParticipantRepository participantRepo
     }
 
     var participantIsAlreadyRegistered = await participantRepository.GetParticipantBy(teamName) != null;
+    var secret = participantIsAlreadyRegistered ? null : await participantRepository.Create(teamName);
 
-    if (participantIsAlreadyRegistered)
-    {
-        return Results.BadRequest(new { error = "Team name already exists" });
-    }
-
-    var result = await participantRepository.Create(teamName);
-    return Results.Ok(result);
+    return secret is null
+        ? Results.BadRequest(new { error = "Team name already exists" })
+        : Results.Ok(secret);
 })
 .WithName("Register")
 .WithMetadata(new SkipTeamValidationAttribute());

@@ -18,7 +18,7 @@ public class ParticipantRepository : IParticipantRepository
         return Task.FromResult(Snapshot(teamName));
     }
 
-    public Task<string> Create(string teamName)
+    public Task<string?> Create(string teamName)
     {
         var userSecret = TeamSecrets.New();
         var isSuccessful = _participants.TryAdd(teamName, new Participant
@@ -28,7 +28,7 @@ public class ParticipantRepository : IParticipantRepository
             UserSecret = userSecret,
         });
 
-        return Task.FromResult(isSuccessful ? userSecret : string.Empty);
+        return Task.FromResult(isSuccessful ? userSecret : null);
     }
 
     public Task<bool> ParticipantExists(string teamName, string teamSecret)
