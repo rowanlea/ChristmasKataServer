@@ -74,8 +74,12 @@ public class CosmosParticipantRepository : IParticipantRepository
         return participant != null && participant.UserSecret == teamSecret;
     }
 
-    public Task EnsureCreated() =>
-        _container.Database.CreateContainerIfNotExistsAsync(new ContainerProperties(_container.Id, "/id"));
+    public async Task EnsureCreated()
+    {
+        var database = _container.Database;
+        await database.Client.CreateDatabaseIfNotExistsAsync(database.Id);
+        await database.CreateContainerIfNotExistsAsync(new ContainerProperties(_container.Id, "/id"));
+    }
 
     public async Task<(Participant, ScoreUpdate)> RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen)
     {
