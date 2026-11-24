@@ -34,18 +34,17 @@ public class CosmosParticipantRepository : IParticipantRepository
 
     public async Task<Participant?> GetParticipantBy(string teamName)
     {
-        var queryDefinition = new QueryDefinition(
-            "SELECT * FROM c WHERE c.teamName = @teamName")
-            .WithParameter("@teamName", teamName);
-        var result = _container.GetItemQueryIterator<Participant>(queryDefinition);
-        
-        var results = new List<Participant>();
-        while (result.HasMoreResults)
+        // Header values reach this point unchecked, and ids may not contain '/', '\', '?' or '#'.
+        if (!TeamNames.IsValid(teamName)) return null;
+        try
         {
-            results.AddRange(await result.ReadNextAsync());
+            var read = await _container.ReadItemAsync<Participant>(teamName, new PartitionKey(teamName));
+            return read.Resource;
         }
-
-        return results.FirstOrDefault();
+        catch (CosmosException e) when (e.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
     public async Task<string?> Create(string teamName)
