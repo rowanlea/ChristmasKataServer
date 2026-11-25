@@ -481,5 +481,5 @@ Layout:
   - Local run (`dotnet run`, in-memory).
   - Configuration keys: `accountEndpoint`, `accountKey`, `Storage:Provider`.
   - A pre-event checklist: empty the Cosmos container, re-copy the harness art and `tree.js` after the pixel-art pass, and run the dry run.
-- [ ] **Step 2:** Run `docker build -f WebAPI/Dockerfile .`, then start the container with `Storage__Provider=InMemory`. Run `curl localhost:8080/register/smoke`, fetch `1.1`, and submit `blank-16.png`. Expected: `correct` `0`, `points` `0`, no SkiaSharp native-load error.
+- [ ] **Step 2:** Run `HTH=<path to hth> smoke/smoke.sh`. It builds the image, starts the container with `Storage__Provider=InMemory`, and submits three answers to `1.1`: `blank-16.png` (expect `correct` `0`, `points` `0`), a half-correct answer from the reference solver in `smoke/solver` (expect 68/136, 0 points, below the 80% mark) and a fully correct one (expect 136/136, 100 points, 1.2 unlocked). It also fails on any SkiaSharp native-load error in the server log. Expected: five `PASS` lines, exit 0.
 - [ ] **Step 3:** Commit: `docs: server readme, api contract, docker smoke`.
