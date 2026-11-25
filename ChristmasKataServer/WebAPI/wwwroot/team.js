@@ -1,6 +1,9 @@
 const NAME_KEY = 'hth.teamName';
 const KEY_KEY = 'hth.uniqueKey';
-const SHOWS_OPEN = 'Light shows unlocked: your pattern goes on the big screen';
+const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,23}$/;
+const KEY_PATTERN = /^[0-9a-f]{32}$/;
+const RECONNECT_MS = 3000;
+const SHOWS_OPEN ='Light shows unlocked: your pattern goes on the big screen';
 
 const form = document.getElementById('credentials-form');
 const errorEl = document.getElementById('credentials-error');
@@ -93,6 +96,12 @@ function render(progress) {
 function listen() {
   if (events) return;
   events = new EventSource('/feed/events');
+  events.onopen = () => loadProgress();
+  events.onerror = () => {
+    if (events?.readyState !== EventSource.CLOSED) return;
+    events = null;
+    setTimeout(() => { if (teamName) listen(); }, RECONNECT_MS);
+  };
   events.addEventListener('tile', e => {
     try {
       if (JSON.parse(e.data).teamName === teamName) loadProgress();
@@ -105,12 +114,17 @@ async function loadProgress() {
     showForm();
     return;
   }
+  if (!NAME_PATTERN.test(teamName) || !KEY_PATTERN.test(uniqueKey)) {
+    showForm('Team name or key has unexpected characters. Type them again, or copy them from hth.json.');
+    return;
+  }
   let response;
   try {
     response = await fetch('/progress', {
       headers: { 'X-Team-Name': teamName, 'X-Unique-Key': uniqueKey },
     });
   } catch {
+    signOutEl.hidden = false;
     nextUpEl.textContent = 'Server unreachable. Reload the page to try again.';
     return;
   }
