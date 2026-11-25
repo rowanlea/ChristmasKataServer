@@ -57,10 +57,31 @@ ol {
   color: var(--gold);
 }
 
-.status {
+.connection {
   margin-left: auto;
   font-size: 1.8vh;
+  color: var(--berry);
+}
+
+.toggle {
+  font: inherit;
+  font-size: 1.8vh;
   color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--panel-edge);
+  border-radius: 0.8vh;
+  padding: 0.6vh 1.4vh;
+  cursor: pointer;
+}
+
+.connection[hidden] ~ .toggle {
+  margin-left: auto;
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--ink);
+  border-color: var(--muted);
 }
 
 .board {
@@ -266,6 +287,34 @@ ol {
 .rung.santa .chip {
   border-color: rgba(255, 214, 10, 0.45);
   background: rgba(255, 214, 10, 0.16);
+}
+
+/* Hidden standings: the feed and light shows take the whole board */
+
+.board.standings-hidden .standings,
+.board.standings-hidden .ladder {
+  display: none;
+}
+
+.board.standings-hidden .right {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+}
+
+.board.standings-hidden .feed-panel {
+  --tile: 27vh;
+  flex: none;
+}
+
+.board.standings-hidden .shows {
+  flex-direction: column;
+  min-width: 0;
+}
+
+.board.standings-hidden .show-tree {
+  width: 100%;
+  height: auto;
 }
 
 /* Right column */

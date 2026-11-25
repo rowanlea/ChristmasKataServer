@@ -37,6 +37,15 @@ public class StaticPageTests
         Assert.That(html, Does.Contain("id=\"ladder\""));
     }
 
+    [Test]
+    public async Task Scoreboard_header_has_hide_and_show_buttons_and_no_status()
+    {
+        var html = await _client.GetStringAsync("/");
+        Assert.That(html, Does.Contain("id=\"hide-standings\"").And.Contain(">Hide leaderboard<"));
+        Assert.That(html, Does.Contain("id=\"show-standings\"").And.Contain(">Show leaderboard<"));
+        Assert.That(html, Does.Not.Contain("id=\"status\"").And.Not.Contain("id=\"frozen\""));
+    }
+
     [TestCase("/art/bulbs-16.json")]
     [TestCase("/art/bulbs-48.json")]
     [TestCase("/art/tree-16.png")]

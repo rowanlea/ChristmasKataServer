@@ -11,7 +11,11 @@ const scoreboardEl = $('scoreboard');
 const scoreboardEmptyEl = $('scoreboard-empty');
 const feedEl = $('feed');
 const feedEmptyEl = $('feed-empty');
-const statusEl = $('status');
+const connectionEl = $('connection');
+const boardEl = document.querySelector('main.board');
+const hideStandingsEl = $('hide-standings');
+const showStandingsEl = $('show-standings');
+const STANDINGS_KEY = 'hth.standingsHidden';
 const bannerEl = $('banner');
 const bannerTreeEl = $('banner-tree');
 const bannerTextEl = $('banner-text');
@@ -254,12 +258,12 @@ function stopPolling() {
 function listen() {
   const events = new EventSource('/feed/events');
   events.onopen = () => {
-    statusEl.textContent = 'live';
+    connectionEl.hidden = true;
     stopPolling();
     loadAll(true).catch(() => {});
   };
   events.onerror = () => {
-    statusEl.textContent = 'reconnecting';
+    connectionEl.hidden = false;
     startPolling();
   };
   events.addEventListener('tile', (e) => addTile(JSON.parse(e.data)));
@@ -271,11 +275,35 @@ function listen() {
   });
 }
 
+function setStandingsHidden(hidden) {
+  boardEl.classList.toggle('standings-hidden', hidden);
+  hideStandingsEl.hidden = hidden;
+  showStandingsEl.hidden = !hidden;
+  try {
+    if (hidden) localStorage.setItem(STANDINGS_KEY, '1');
+    else localStorage.removeItem(STANDINGS_KEY);
+  } catch {}
+  feedEl.replaceChildren(...shownTiles.map((t) => tileEl(t, false)));
+  if (!hidden) fitLadder();
+}
+
+function storedStandingsHidden() {
+  try {
+    return localStorage.getItem(STANDINGS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+hideStandingsEl.addEventListener('click', () => setStandingsHidden(true));
+showStandingsEl.addEventListener('click', () => setStandingsHidden(false));
+setStandingsHidden(storedStandingsHidden());
+
 async function start() {
   try {
     await loadAll(false);
   } catch {
-    statusEl.textContent = 'server unreachable';
+    connectionEl.hidden = false;
   }
   setInterval(tickShow, SHOW_FRAME_MS);
   listen();
