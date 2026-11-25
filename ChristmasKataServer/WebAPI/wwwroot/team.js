@@ -1,7 +1,5 @@
 const NAME_KEY = 'hth.teamName';
 const KEY_KEY = 'hth.uniqueKey';
-const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{0,23}$/;
-const KEY_PATTERN = /^[0-9a-f]{32}$/;
 const RECONNECT_MS = 3000;
 const SHOWS_OPEN ='Light shows unlocked: your pattern goes on the big screen';
 
@@ -14,6 +12,12 @@ const showsEl = document.getElementById('shows-section');
 const showsHeadingEl = document.getElementById('shows-heading');
 const showsLockedText = showsHeadingEl.textContent;
 const nextUpSignedOut = nextUpEl.textContent;
+
+// The server renders its own rules into the page, so they live in one place.
+const whole = pattern => new RegExp(`^(?:${pattern})$`, 'v');
+const NAME_PATTERN = whole(form.dataset.namePattern);
+const KEY_PATTERN = whole(form.dataset.keyPattern);
+const PASS_PERCENT = nextUpEl.dataset.passPercent;
 
 let events = null;
 
@@ -75,7 +79,7 @@ function setNextUp(progress) {
   detail.textContent = [
     `${row.querySelector('.size').textContent} rows`,
     percent == null ? 'no attempt yet' : `best ${percent}%`,
-    '80% to pass',
+    `${PASS_PERCENT}% to pass`,
   ].join(' · ');
   nextUpEl.replaceChildren(`${progress.next} ${row.querySelector('.name').textContent}`, detail);
 }

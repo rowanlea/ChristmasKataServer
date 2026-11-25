@@ -45,7 +45,7 @@ public static class KataEndpoints
                 {
                     var previous = PuzzleCatalogue.Previous(found)!;
                     return Bodies.Error(StatusCodes.Status403Forbidden,
-                        $"puzzle {found.Id} is locked: reach 80% on {previous.Id} first");
+                        $"puzzle {found.Id} is locked: reach {Points.PassPercent}% on {previous.Id} first");
                 }
 
                 var generated = generator.Generate(found, Random.Shared);

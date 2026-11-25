@@ -19,7 +19,7 @@
   </header>
 
   <main>
-    <form id="credentials-form" class="panel credentials" hidden>
+    <form id="credentials-form" class="panel credentials" data-name-pattern="@Model.NamePattern" data-key-pattern="@Model.KeyPattern" hidden>
       <h2>Sign in</h2>
       <p class="hint">Use the team name and key you got when you registered with <code>hth</code>.</p>
       <label>Team name <input name="teamName" autocomplete="username" required></label>
@@ -30,7 +30,7 @@
 
     <section class="panel next" aria-labelledby="next-title">
       <h2 id="next-title">Next up</h2>
-      <p id="next-up" class="next-up">Sign in to see where you are.</p>
+      <p id="next-up" class="next-up" data-pass-percent="@Model.PassPercent">Sign in to see where you are.</p>
     </section>
 
     <section class="panel" aria-labelledby="puzzles-title">

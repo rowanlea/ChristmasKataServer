@@ -106,8 +106,12 @@ public partial class Program;
 
 public static partial class TeamNames
 {
-    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9-]{0,23}\z")]
-    private static partial Regex Pattern();
+    // Unanchored so the team page can use it as a browser regex too. The hyphen is escaped
+    // because browsers compile with the v flag, where a bare - in a class is an error.
+    public const string Pattern = @"[A-Za-z0-9][A-Za-z0-9\-]{0,23}";
 
-    public static bool IsValid(string name) => Pattern().IsMatch(name);
+    [GeneratedRegex("^" + Pattern + @"\z")]
+    private static partial Regex Matcher();
+
+    public static bool IsValid(string name) => Matcher().IsMatch(name);
 }
