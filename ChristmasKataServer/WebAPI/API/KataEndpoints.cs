@@ -138,5 +138,14 @@ public static class KataEndpoints
             })
             .WithName("Leaderboard")
             .WithMetadata(new SkipTeamValidationAttribute());
+
+        app.MapGet("/progress", async (HttpContext context, IParticipantRepository repository) =>
+            {
+                var participant = await repository.GetParticipantBy(Bodies.Team(context));
+                if (participant is null)
+                    return Bodies.Error(StatusCodes.Status401Unauthorized, "Invalid team credentials");
+                return Results.Ok(Progress.Build(participant));
+            })
+            .WithName("Progress");
     }
 }

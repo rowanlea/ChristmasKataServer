@@ -61,6 +61,48 @@ public class KataApiTests
         _factory.Generator.Override = new FixedAnswerGenerator(Line("tree-16-cycle.txt"), 16);
 
     [Test]
+    public async Task Progress_without_credentials_is_401()
+    {
+        using var anonymous = _factory.CreateClient();
+
+        var response = await anonymous.GetAsync("/progress");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Progress_with_wrong_key_is_401()
+    {
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Team-Name", "team-07");
+        client.DefaultRequestHeaders.Add("X-Unique-Key", "not-the-key");
+
+        var response = await client.GetAsync("/progress");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Progress_returns_statuses_for_the_calling_team()
+    {
+        KnownAnswerIsTree16Cycle();
+        var challenge = await Issue(_team, "1.1");
+        Assert.That((await Submit(_team, challenge, Fixture("tree-16-cycle.png"))).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        var progress = await Json(await _team.GetAsync("/progress"));
+
+        Assert.That(progress.GetProperty("teamName").GetString(), Is.EqualTo("team-07"));
+        Assert.That(progress.GetProperty("next").GetString(), Is.EqualTo("1.2"));
+        Assert.That(progress.GetProperty("showsUnlocked").GetBoolean(), Is.False);
+        var puzzles = progress.GetProperty("puzzles").EnumerateArray().ToList();
+        Assert.That(puzzles[0].GetProperty("id").GetString(), Is.EqualTo("1.1"));
+        Assert.That(puzzles[0].GetProperty("status").GetString(), Is.EqualTo("passed"));
+        Assert.That(puzzles[0].GetProperty("percent").GetInt32(), Is.EqualTo(100));
+        Assert.That(puzzles[1].GetProperty("status").GetString(), Is.EqualTo("current"));
+        Assert.That(puzzles[1].GetProperty("percent").ValueKind, Is.EqualTo(JsonValueKind.Null));
+    }
+
+    [Test]
     public async Task Fetch_returns_script_and_expiry()
     {
         var challenge = await Issue(_team, "1.1");

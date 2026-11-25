@@ -14,6 +14,7 @@ Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 3
 | `GET /shows/permission` | none | `204` | `403` |
 | `POST /shows` | body `{"frames":[...]}`, at most 1 MiB | `201` `{"frames":412}` | `403`, `400`, `413`, `429` |
 | `GET /shows` *public* | none | `200` latest show per team, oldest submission first | none |
+| `GET /progress` | none | `200` the calling team's progress (see Shapes) | none |
 | `GET /leaderboard` *public* | optional `If-None-Match` | `200` `{"teams","ladder"}` with an `ETag` header; `304` when `If-None-Match` matches | none |
 | `GET /feed` *public* | none | `200` `{"tiles"}` | none |
 | `GET /feed/events` *public* | none | `200` `text/event-stream` | none |
@@ -32,6 +33,8 @@ Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 3
 Leaderboard: `{"teams":[{"rank":1,"teamName":"team-07","total":1234}],"ladder":[...rungs]}`. Teams are ordered by total descending, then team name. `rank` is 1 plus the number of teams with a strictly higher total, so tied totals share a rank and the next rank skips (1, 1, 3). The server builds the body once per score change as compact JSON (no newlines) and serves the same bytes to every request and every SSE subscriber. The `ETag` changes whenever the body does.
 
 Ladder rung (the `ladder` array of the leaderboard, 24 rungs): `{"level":"1.2","name":"Fill Your Boots","teams":[{"teamName":"team-07","percent":50}]}`. The first rung has level `santa` and name `Found Santa`. Each team sits once, on the first puzzle where its best is below 80 %, with `percent` its best there; a team that has passed 7.1 sits on `santa` at 100. Teams on a rung are ordered by `percent` descending, then name.
+
+Progress: `{"teamName":"team-07","next":"1.2","showsUnlocked":false,"puzzles":[{"id":"1.1","status":"passed","percent":100},{"id":"1.2","status":"current","percent":null}, ...]}`. `puzzles` lists every puzzle in catalogue order. `status` is `passed` (best at least 80 %), `current` (open but not passed) or `locked`. `percent` is `floor(100 * best / bulbCount)`, or `null` before any submission. `next` is the first puzzle not passed, or `santa` once all are passed. `showsUnlocked` is true after full marks on 7.1.
 
 Tile: `{"teamName","puzzle","correct": int,"bulbCount","size","states":"<sampled line; '.' = background>","banner": null | {"kind":"first-full-marks"|"first-round-finish"|"secret-santa","text":"..."}}`. `/feed` returns the newest 8 tiles, newest first.
 
@@ -64,6 +67,9 @@ curl -i "${H[@]}" $BASE/shows/permission
 curl -s -X POST "${H[@]}" -H "Content-Type: application/json" \
   -d '{"frames":["KKKK...1176 characters..."]}' $BASE/shows
 curl -s $BASE/shows
+
+# your progress
+curl -s "${H[@]}" $BASE/progress
 
 # leaderboard and feed
 curl -s $BASE/leaderboard
