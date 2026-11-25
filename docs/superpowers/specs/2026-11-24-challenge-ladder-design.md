@@ -52,7 +52,7 @@ The big-screen scoreboard should show every challenge and how far each team has 
 
 **Data**
 
-- The server builds the ladder in .NET (`Ladder.Build`) from each team's public best correct bulbs, and serves it at `GET /ladder` and as an SSE `ladder` event after each `leaderboard` event. The page only renders it.
+- The server builds the ladder in .NET (`Ladder.Build`) from each team's public best correct bulbs, and serves it in the `ladder` field of `GET /leaderboard` and of the SSE `leaderboard` event. (`GET /ladder` and the separate `ladder` event were removed by the team-page change.) The page only renders it.
 - The progress on a level is the percentage of bulbs correct, so the 80 % unlock point matches the unlock rule exactly.
 - The puzzle order is the fixed list 1.1–1.4, 2.1–2.4, 3.1–3.4, 4.1–4.4, 5.1–5.3, 6.1–6.3, 7.1.
 - It refreshes wherever the leaderboard refreshes now, on SSE events and polling fallback.

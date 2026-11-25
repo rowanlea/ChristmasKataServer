@@ -14,8 +14,7 @@ Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 3
 | `GET /shows/permission` | none | `204` | `403` |
 | `POST /shows` | body `{"frames":[...]}`, at most 1 MiB | `201` `{"frames":412}` | `403`, `400`, `413`, `429` |
 | `GET /shows` *public* | none | `200` latest show per team, oldest submission first | none |
-| `GET /leaderboard` *public* | none | `200` entries, total descending | none |
-| `GET /ladder` *public* | none | `200` 24 rungs, Found Santa first, then 7.1 down to 1.1 | none |
+| `GET /leaderboard` *public* | optional `If-None-Match` | `200` `{"teams","ladder"}` with an `ETag` header; `304` when `If-None-Match` matches | none |
 | `GET /feed` *public* | none | `200` `{"tiles"}` | none |
 | `GET /feed/events` *public* | none | `200` `text/event-stream` | none |
 
@@ -30,17 +29,16 @@ Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 3
 
 ## Shapes
 
-Leaderboard entry: `{"teamName":"team-07","total":1234,"puzzles":{"1.1":100}}`. Ties are ordered by team name.
+Leaderboard: `{"teams":[{"rank":1,"teamName":"team-07","total":1234}],"ladder":[...rungs]}`. Teams are ordered by total descending, then team name. `rank` is 1 plus the number of teams with a strictly higher total, so tied totals share a rank and the next rank skips (1, 1, 3). The server builds the body once per score change as compact JSON (no newlines) and serves the same bytes to every request and every SSE subscriber. The `ETag` changes whenever the body does.
 
-Ladder rung: `{"level":"1.2","name":"Fill Your Boots","teams":[{"teamName":"team-07","percent":50}]}`. The first rung has level `santa` and name `Found Santa`. Each team sits once, on the first puzzle where its best is below 80 %, with `percent` its best there; a team that has passed 7.1 sits on `santa` at 100. Teams on a rung are ordered by `percent` descending, then name.
+Ladder rung (the `ladder` array of the leaderboard, 24 rungs): `{"level":"1.2","name":"Fill Your Boots","teams":[{"teamName":"team-07","percent":50}]}`. The first rung has level `santa` and name `Found Santa`. Each team sits once, on the first puzzle where its best is below 80 %, with `percent` its best there; a team that has passed 7.1 sits on `santa` at 100. Teams on a rung are ordered by `percent` descending, then name.
 
 Tile: `{"teamName","puzzle","correct": int,"bulbCount","size","states":"<sampled line; '.' = background>","banner": null | {"kind":"first-full-marks"|"first-round-finish"|"secret-santa","text":"..."}}`. `/feed` returns the newest 8 tiles, newest first.
 
 Server-sent events on `/feed/events`:
 
 - `tile`: data is a Tile.
-- `leaderboard`: data is the public leaderboard. Sent after each submission.
-- `ladder`: data is the ladder, as from `GET /ladder`. Sent straight after each `leaderboard` event.
+- `leaderboard`: data is the leaderboard, the same body as `GET /leaderboard` (`teams` and `ladder`). Sent after each submission.
 - `show`: data is `{"teamName","first":bool}`. The page then reloads `GET /shows`. A team's first show gets its banner from this event.
 
 A `: ping` comment is sent every 15 seconds to keep the connection open.
@@ -69,7 +67,6 @@ curl -s $BASE/shows
 
 # leaderboard and feed
 curl -s $BASE/leaderboard
-curl -s $BASE/ladder
 curl -s $BASE/feed
 curl -N $BASE/feed/events
 ```
