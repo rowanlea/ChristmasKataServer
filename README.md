@@ -7,6 +7,7 @@ Server for the LSCC Christmas kata, "Hack the Halls" (.NET 10 Web API). The kata
 Teams register, then fetch a puzzle script (a program that lights a Christmas tree of bulbs), run it with their own interpreter, and submit a 1200 x 1200 PNG of the result. The server samples the bulbs from the image, scores it against the expected tree, and keeps each team's best per puzzle. It also:
 
 - serves a big-screen scoreboard at `/` with a live feed of submissions (server-sent events) and a live leaderboard that the host can hide on the big screen;
+- serves a page for each team at `/team` showing its next puzzle, its status and best score on every puzzle, and how to make a light show;
 - unlocks light shows for teams that get full marks on Santa (7.1), and plays the latest show per team on the scoreboard.
 
 ## Run locally
@@ -16,7 +17,7 @@ cd ChristmasKataServer
 dotnet run --project WebAPI --launch-profile http
 ```
 
-`appsettings.Development.json` selects the in-memory store, so this needs no other setup. Data is lost when the process stops. Open `http://localhost:5289/` for the scoreboard and see [docs/api.md](docs/api.md) for the API.
+`appsettings.Development.json` selects the in-memory store, so this needs no other setup. Data is lost when the process stops. Open `http://localhost:5289/` for the scoreboard, `http://localhost:5289/team` for the team page, and see [docs/api.md](docs/api.md) for the API.
 
 Tests: `dotnet test` in `ChristmasKataServer/`.
 

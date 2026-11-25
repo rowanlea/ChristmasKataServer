@@ -1,17 +1,6 @@
 :root {
-  --night: #0A0E14;
-  --panel: #111823;
-  --panel-edge: #1E2A3A;
-  --ink: #F2EEE3;
-  --muted: #8E9AAB;
-  --gold: #FFD60A;
-  --silver: #C9D3DE;
-  --bronze: #D9925B;
-  --holly: #2BD46B;
-  --berry: #FF4D5E;
   --tile: 17vh;
   --gap: 1.5vh;
-  color-scheme: dark;
 }
 
 * {
@@ -28,7 +17,7 @@ body {
 body {
   background: var(--night);
   color: var(--ink);
-  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  font-family: var(--font);
   display: flex;
   flex-direction: column;
   padding: 2vh 2vh 1.5vh;

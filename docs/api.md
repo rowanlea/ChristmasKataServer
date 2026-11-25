@@ -15,6 +15,7 @@ Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 3
 | `POST /shows` | body `{"frames":[...]}`, at most 1 MiB | `201` `{"frames":412}` | `403`, `400`, `413`, `429` |
 | `GET /shows` *public* | none | `200` latest show per team, oldest submission first | none |
 | `GET /progress` | none | `200` the calling team's progress (see Shapes) | none |
+| `GET /team` *public* | none | `200` HTML page: a team signs in with its name and key (kept in the browser), then sees its progress from `GET /progress`, live, and how to make a light show | none |
 | `GET /leaderboard` *public* | optional `If-None-Match` | `200` `{"teams","ladder"}` with an `ETag` header; `304` when `If-None-Match` matches | none |
 | `GET /feed` *public* | none | `200` `{"tiles"}` | none |
 | `GET /feed/events` *public* | none | `200` `text/event-stream` | none |

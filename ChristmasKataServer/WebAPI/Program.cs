@@ -45,6 +45,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddSingleton<Feed>();
 builder.Services.AddSingleton<LeaderboardCache>();
 
+builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app = builder.Build();
@@ -87,6 +88,7 @@ app.MapGet("/register/{teamName}", async (
 app.MapKataEndpoints();
 app.MapFeedEndpoints();
 app.MapShowEndpoints();
+app.MapRazorPages().WithMetadata(new SkipTeamValidationAttribute());
 
 app.Run();
 

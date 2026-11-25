@@ -1,0 +1,67 @@
+@page "/team"
+@model TeamModel
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hack the Halls · your team</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/team.css">
+  <script type="module" src="/team.js"></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Hack the Halls</h1>
+    <span id="team-label" class="team-label"></span>
+    <button type="button" id="sign-out" class="toggle" hidden>Sign out</button>
+  </header>
+
+  <main>
+    <form id="credentials-form" class="panel credentials" hidden>
+      <h2>Sign in</h2>
+      <p class="hint">Use the team name and key you got when you registered with <code>hth</code>.</p>
+      <label>Team name <input name="teamName" autocomplete="username" required></label>
+      <label>Key <input name="uniqueKey" type="password" autocomplete="current-password" required></label>
+      <p id="credentials-error" class="error" role="alert" hidden></p>
+      <button type="submit">Show my progress</button>
+    </form>
+
+    <section class="panel next" aria-labelledby="next-title">
+      <h2 id="next-title">Next up</h2>
+      <p id="next-up" class="next-up">Sign in to see where you are.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="puzzles-title">
+      <h2 id="puzzles-title">Puzzles</h2>
+      <table class="puzzles">
+        <thead>
+          <tr><th scope="col">Puzzle</th><th scope="col">Name</th><th scope="col" class="num">Rows</th><th scope="col">Status</th><th scope="col" class="num">Best</th></tr>
+        </thead>
+        <tbody>
+          @foreach (var puzzle in Model.Puzzles)
+          {
+            <tr data-puzzle="@puzzle.Id">
+              <td class="id">@puzzle.Id</td>
+              <td class="name">@puzzle.Name</td>
+              <td class="size num">@puzzle.Size</td>
+              <td class="status">…</td>
+              <td class="percent num">—</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section id="shows-section" class="panel shows locked" aria-labelledby="shows-heading">
+      <h2>Light shows</h2>
+      <p id="shows-heading" class="shows-heading">Unlocks with full marks on @Model.Finale.Id</p>
+      <p>Design your own pattern on the tree and it plays in the light-show panel of the big screen. Only your latest show is kept. Shows are not scored.</p>
+      <p>Write a script that starts with <code>SIZE @Model.FrameRows</code> (the same grid as @Model.Finale.Name), up to @Model.MaxFrames steps, one frame per step. Then run:</p>
+      <pre><code>hth show myshow.txt -- &lt;your program&gt;</code></pre>
+      <p>The CLI runs your program on every step, saves a GIF locally, and uploads the show.</p>
+    </section>
+  </main>
+</body>
+</html>
