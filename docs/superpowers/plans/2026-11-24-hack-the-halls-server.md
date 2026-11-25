@@ -25,14 +25,16 @@
 - Points: `pct = floor(100 × correct / bulbCount)`. `correct == bulbCount` scores 100. Otherwise `pct ≥ 80` scores `40 + 2 × (pct − 80)` (so 99 % scores 78), and `pct < 80` scores 0.
 - Unlocking: puzzles unlock one at a time in catalogue order (`1.1`, `1.2`, … `6.3`, `7.1`). `1.1` is always open. Each later puzzle opens once the team's best on the previous puzzle is ≥ 80 % (points > 0). No unlock is time-based.
 - A team's best submission per puzzle is the one with most `correct`. Leaderboard total = sum of best points per puzzle.
-- Light shows: open to a team once its best on `7.1` is full marks. A show is 1–500 frames of exactly 136 `RGBWK` chars. Only the latest show per team is kept. Nothing is scored.
-- Event times come from configuration, because the date is not confirmed: `Event:FreezesAt` (20:45), as ISO-8601 `DateTimeOffset`. `Event:AdminKey` is a secret.
+- Light shows: open to a team once its best on `7.1` is full marks. A show is 1–500 frames of exactly 1176 `RGBWK` chars (a 48-row tree, the same grid as `7.1`). Only the latest show per team is kept. Nothing is scored.
+- No freeze and no admin key. Scores are live for the whole event. The host hides the standings on the big screen with the scoreboard's "Hide leaderboard" button and shows them again at prize-giving.
 - Team names: 1–24 characters, `^[A-Za-z0-9][A-Za-z0-9-]*$`. They appear on the big screen.
 - Drop FluentAssertions: v8 needs a commercial licence. Use NUnit `Assert.That`.
 
 ### API contract (identical in harness plan)
 
-Auth headers `X-Team-Name` and `X-Unique-Key` are required on every route except those marked *public*. Errors return `{"error": "<message>"}`.
+`docs/api.md` is the live contract. This table matches it.
+
+Auth headers `X-Team-Name` and `X-Unique-Key` are required on every route except those marked *public*. Errors return `{"error": "<message>"}`. Rate limits (per team, fixed 5-minute window, `429` when exceeded): challenges 30, submissions 30, shows 10.
 
 | Route | Request | Success | Failures |
 | --- | --- | --- | --- |
@@ -40,14 +42,15 @@ Auth headers `X-Team-Name` and `X-Unique-Key` are required on every route except
 | `POST /puzzles/{puzzle}/challenges` | — | `201` `{"challengeId":"<guid>","puzzle":"3.2","size":16,"script":"SIZE 16\n…","expiresAt":"<ISO-8601>"}` | `404` unknown puzzle, `403` locked |
 | `POST /challenges/{challengeId}/submission` | body `image/png`, ≤ 1 MiB | `200` `{"puzzle":"3.2","correct":131,"bulbCount":136,"points":72,"bestPoints":72,"unlocked":"3.3"}`. `unlocked` is the puzzle this submission opened, else `null` | `404` unknown or another team's, `409` already submitted, `410` expired, `400` not a 1200 × 1200 PNG, `413` too large |
 | `GET /shows/permission` | — | `204` | `403` `Santa comes first: get full marks on 7.1 to unlock light shows` |
-| `POST /shows` | body `{"frames":["<136 chars>",…]}`, ≤ 256 KiB | `201` `{"frames":412}` | `403` as above, `400` no frames, over 500 frames, or a frame not 136 `RGBWK` chars, `413` too large |
+| `POST /shows` | body `{"frames":["<1176 chars>",…]}`, ≤ 1 MiB | `201` `{"frames":412}` | `403` as above, `400` no frames, over 500 frames, or a frame not 1176 `RGBWK` chars, `413` too large |
 | `GET /shows` *public* | — | `200` `[{"teamName","frames":[…],"submittedAt"}]`, the latest show per team, oldest submission first | — |
-| `GET /leaderboard` *public* | — | `200` `[{"teamName":"team-07","total":1234,"puzzles":{"1.1":100}}]` (points), total descending. After freeze, pre-freeze points | — |
-| `GET /leaderboard/final` | header `X-Admin-Key` (no team headers) | as above, live scores | `401` |
-| `GET /feed` *public* | — | `200` `{"frozen":false,"tiles":[Tile…]}`, newest first, max 8 | — |
-| `GET /feed/events` *public* | — | `text/event-stream`: event `tile` (data Tile), event `leaderboard` (data leaderboard; not sent after freeze), and event `show` (data `{"teamName","first":bool}`; the page then reloads `/shows`) | — |
+| `GET /progress` | — | `200` `{"teamName","next","showsUnlocked","puzzles":[{"id","status","percent"}]}`, the calling team's progress | — |
+| `GET /team` *public* | — | `200` HTML page: a team signs in with its name and key (kept in the browser), then sees its progress from `GET /progress`, live | — |
+| `GET /leaderboard` *public* | optional `If-None-Match` | `200` `{"teams":[{"rank":1,"teamName":"team-07","total":1234}],"ladder":[…rungs]}` with an `ETag` header, teams by total descending then name; `304` when `If-None-Match` matches | — |
+| `GET /feed` *public* | — | `200` `{"tiles":[Tile…]}`, newest first, max 8 | — |
+| `GET /feed/events` *public* | — | `text/event-stream`: event `tile` (data Tile), event `leaderboard` (data the same body as `GET /leaderboard`, sent after each submission), and event `show` (data `{"teamName","first":bool}`; the page then reloads `/shows`) | — |
 
-`Tile = {"teamName","puzzle","correct": int|null (null after freeze),"bulbCount","size","states":"<sampled line; '.' = background>","banner": null | {"kind":"first-full-marks"|"first-round-finish"|"secret-santa","text":"…"}}`. A team's first show gets a banner on the page from the `show` event, not from a tile.
+`Tile = {"teamName","puzzle","correct": int,"bulbCount","size","states":"<sampled line; '.' = background>","banner": null | {"kind":"first-full-marks"|"first-round-finish"|"secret-santa","text":"…"}}`. A team's first show gets a banner on the page from the `show` event, not from a tile. `docs/api.md` describes the ladder rung and progress shapes in full.
 
 ## Review Focus
 
@@ -329,13 +332,13 @@ Rules:
 - Produces:
   - `static class Points { int For(int correct, int bulbCount); bool Passes(int correct, int bulbCount) }`, using the formula in Global Constraints. `Passes` means ≥ 80 %.
   - `Participant`: remove `Score`/`UpdateHighScore`. Add:
-    - `Dictionary<string,int> BestCorrect` and `Dictionary<string,int> PublicBestCorrect` (puzzle id to best `correct`).
+    - `Dictionary<string,int> BestCorrect` (puzzle id to best `correct`).
     - `Show? Show`, with `sealed record Show(IReadOnlyList<string> Frames, DateTimeOffset SubmittedAt)`.
     - `string? ETag` (`[JsonProperty("_etag")]`).
-    - `ScoreUpdate RecordScore(Puzzle puzzle, int correct, bool frozen)`, with `sealed record ScoreUpdate(int BestPoints, Puzzle? Unlocked)`. It raises `BestCorrect`, and raises `PublicBestCorrect` only when not frozen. `Unlocked` is `PuzzleCatalogue.Next(puzzle)` when this call took the best from below 80 % to at least 80 %.
+    - `ScoreUpdate RecordScore(Puzzle puzzle, int correct)`, with `sealed record ScoreUpdate(int BestPoints, Puzzle? Unlocked)`. It raises `BestCorrect`. `Unlocked` is `PuzzleCatalogue.Next(puzzle)` when this call took the best from below 80 % to at least 80 %.
     - `bool IsUnlocked(Puzzle p)`: true for the first puzzle, or when `Points.Passes` holds for the best on `Previous(p)`.
     - `bool MayShow`: the best on `7.1` is 1176.
-  - `IParticipantRepository.RecordScore(string teamName, Puzzle puzzle, int correct, bool frozen) → Task<(Participant, ScoreUpdate)>`. It does a read–modify–replace. Cosmos uses `IfMatchEtag` and retries up to 5 times on `412`. In-memory uses a per-team lock.
+  - `IParticipantRepository.RecordScore(string teamName, Puzzle puzzle, int correct) → Task<(Participant, ScoreUpdate)>`. It does a read–modify–replace. Cosmos uses `IfMatchEtag` and retries up to 5 times on `412`. In-memory uses a per-team lock.
   - `IParticipantRepository.SaveShow(string teamName, Show show) → Task<bool>`. It returns true when this is the team's first show. It uses the same retry and lock.
   - `sealed record Challenge(Guid Id, string TeamName, string Puzzle, int Size, Tree Answer, DateTimeOffset ExpiresAt)`.
   - `enum TakeOutcome { Ok, NotFound, AlreadySubmitted, Expired }`.
@@ -353,7 +356,6 @@ Rules:
   - `RecordScore_reports_unlock_once`: on 1.1, 100 correct (73 %) unlocks nothing. 120 correct unlocks `1.2`. A later 136 unlocks nothing new.
   - `IsUnlocked_follows_previous_puzzle`: a new participant has only `1.1` open. After 120 correct on `1.1`, `1.2` is open and `1.3` is not.
   - `MayShow_needs_full_marks_on_secret_santa`: 1175 on `7.1` gives false, and 1176 gives true.
-  - `RecordScore_after_freeze_leaves_public_unchanged`.
   - `SaveShow_replaces_and_reports_first`: the first call returns true, the second returns false, and only the second show is kept.
   - `Take_twice_is_AlreadySubmitted`.
   - `Take_by_other_team_is_NotFound`.
@@ -367,17 +369,16 @@ Rules:
 ### Task 11: Live feed and banners
 
 **Files:**
-- Create: `WebAPI/Service/Feed.cs`, `WebAPI/Service/EventClock.cs`
+- Create: `WebAPI/Service/Feed.cs`
 - Test: `Tests/Service/FeedTests.cs`
 
 **Interfaces:**
 - Consumes: `IParticipantRepository`, `Puzzle`.
 - Produces:
-  - `sealed class EventClock(TimeProvider time, IOptions<EventOptions> options) { bool Frozen }`, with `EventOptions { DateTimeOffset FreezesAt; string AdminKey }`.
   - `sealed record Banner(string Kind, string Text)`.
   - `sealed record Tile(string TeamName, string Puzzle, int? Correct, int BulbCount, int Size, string States, Banner? Banner)`.
   - `abstract record FeedEvent`, with `TileAdded(Tile)`, `LeaderboardChanged`, and `ShowAdded(string TeamName, bool First)`.
-  - `sealed class Feed(EventClock clock)`. Singleton. Members:
+  - `sealed class Feed`. Singleton. Members:
     - `Task InitialiseAsync(IParticipantRepository)`.
     - `Tile Publish(string team, Puzzle p, int correct, string sampledStates)`. It decides the banner, keeps the latest 8, and broadcasts to subscribers.
     - `void PublishShow(string team, bool first)`.
@@ -388,7 +389,7 @@ Rules:
   - **first-full-marks:** the first full marks on a puzzle by any team. Text: `"{team} first to solve {id} {name}"`.
   - **first-round-finish:** the first team with full marks on every puzzle in a round. Text: `"{team} first to finish round {n}"`.
   - "Announced" sets are seeded in `InitialiseAsync` from all participants' `BestCorrect`, where full marks = `Size(Size+1)/2`.
-- After freeze: `Correct` is null, and no `LeaderboardChanged` events are sent. Show events still flow.
+- Every submission sends `LeaderboardChanged`. There is no freeze.
 
 - [ ] **Step 1: Write failing tests:**
   - `First_full_marks_gets_banner_second_does_not`.
@@ -396,7 +397,6 @@ Rules:
   - `Round_finish_banner_once`.
   - `Feed_keeps_latest_eight_newest_first`.
   - `Seeded_firsts_survive_restart`: a participant already has full marks on 1.1, so a new full-marks 1.1 gets no banner.
-  - `Frozen_tile_has_null_correct`.
   - `Subscriber_receives_tile_and_show`.
 - [ ] **Step 2:** Run the tests. Expected: FAIL.
 - [ ] **Step 3:** Implement. Use one bounded `Channel` per subscriber and drop the oldest when full.
@@ -418,7 +418,7 @@ Rules:
 - Consumes:
   - `PuzzleCatalogue`, `IChallengeGenerator`, `ChallengeStore`, `PngSampler`, `Points`.
   - `IParticipantRepository.RecordScore`/`SaveShow`, `Participant.IsUnlocked`/`MayShow`.
-  - `EventClock`, `Feed.Publish`/`PublishShow`/`Subscribe`.
+  - `Feed.Publish`/`PublishShow`/`Subscribe`.
 - Produces: the routes and status codes exactly as the API contract. The locked-puzzle `403` message is `puzzle {id} is locked: reach 80% on {previous} first`.
 
 - [ ] **Step 1: Write failing tests** with `KataApiFactory` (team registered in setup), posting fixture PNG bytes. A helper `UnlockThrough(team, id)` records passing scores straight into the repository.
@@ -430,14 +430,15 @@ Rules:
   - `Submit_twice_is_409`, `Submit_after_expiry_is_410`, `Submit_other_teams_challenge_is_404`. The best is unchanged in each.
   - `Submit_garbage_is_400`, `Submit_wrong_dimensions_is_400`, `Submit_2MiB_is_413`.
   - `Leaderboard_sums_best_points_per_puzzle` and sorts descending.
-  - `Leaderboard_frozen_hides_post_freeze_scores`. `/leaderboard/final` with the admin key shows them, and without the key gives `401`.
+  - `Leaderboard_returns_ranked_teams_and_ladder`: tied totals share a rank (1, 1, 3), and the ladder places each team on its first puzzle below 80 %.
+  - `Leaderboard_ETag_changes_after_a_new_score`, and a repeat request with `If-None-Match` set to the current `ETag` gives `304`.
   - `GET /feed` matches the contract shape. `GET /feed/events` streams a `tile` event within 2 s of a submission (read with `HttpClient` and `HttpCompletionOption.ResponseHeadersRead`).
   - `ShowApiTests`:
     - `Show_refused_before_santa`: permission gives `403` with the Santa message, and so does `POST /shows`.
     - `Show_accepted_after_full_marks_santa`: permission gives `204`. Posting 3 frames gives `201`, `GET /shows` lists them, and `/feed/events` streams `show` with `first: true`. A second post streams `first: false` and replaces the frames.
     - `Show_rejects_bad_frames`: 0 frames, 501 frames, and a 135-char frame each give `400`. A 300 KiB body gives `413`.
 - [ ] **Step 2:** Run the tests. Expected: FAIL.
-- [ ] **Step 3:** Implement. Production `ChallengeGenerator` uses `Random.Shared`, and the factory substitutes `IChallengeGenerator`. Exclude `/leaderboard/final` from team auth, and check `X-Admin-Key` against `Event:AdminKey` with `CryptographicOperations.FixedTimeEquals`. The SSE endpoint writes a `: ping` comment every 15 s so proxies keep the stream open.
+- [ ] **Step 3:** Implement. Production `ChallengeGenerator` uses `Random.Shared`, and the factory substitutes `IChallengeGenerator`. The server builds the leaderboard body (teams and ladder) once per score change and serves the same bytes to every request and SSE subscriber. The SSE endpoint writes a `: ping` comment every 15 s so proxies keep the stream open.
 - [ ] **Step 4:** Run the tests. Expected: PASS.
 - [ ] **Step 5:** Commit: `feat: challenge, submission, leaderboard, feed and show api`.
 
@@ -451,11 +452,11 @@ Rules:
 - Modify: `WebAPI/Program.cs` (`UseDefaultFiles`, `UseStaticFiles`, with static files exempt from auth)
 
 Layout:
-- **Scoreboard (left):** rank, team, and total points from `/leaderboard`.
+- **Scoreboard (left):** rank, team, and total points from the `teams` array of `/leaderboard`, and the challenge ladder from its `ladder` array. The server computes both; the page only renders them.
 - **Feed (right):** tiles with team, puzzle, `correct/bulbCount`, and the decorated tree drawn by `tree.js` from `states`. The newest tile slides in at the top, max 8.
 - **Banners:** a banner overlays the feed for 6 s. The tree is enlarged for `first-full-marks` and `secret-santa`. A `show` event with `first: true` shows a `"{team} has a light show!"` banner.
 - **Light-show panel (under the feed):** loads `/shows` and plays each team's latest show in turn, at 10 frames a second, with the team name. It reloads `/shows` on each `show` event and keeps its place.
-- **Freeze:** a "Scores frozen" badge shows, the board stops updating, and tile counts are hidden.
+- **Hide leaderboard:** a button hides the standings and the ladder, so the host can keep the final order secret until prize-giving. "Show leaderboard" brings them back.
 - **Data:** initial state comes from `GET /feed`, `GET /leaderboard`, and `GET /shows`. Live updates come from `EventSource('/feed/events')`. If `EventSource` errors, poll all three every 5 s.
 - **Safety:** all team-supplied text goes through `textContent`.
 
@@ -466,7 +467,7 @@ Layout:
   - The banner shows on the first full marks.
   - The show panel plays, and the first show gets a banner.
   - A team named `team-<b>x</b>` is rejected at register.
-  - Setting `Event:FreezesAt` to the past shows the frozen badge and hides counts.
+  - "Hide leaderboard" hides the standings and the ladder, and "Show leaderboard" brings them back.
 - [ ] **Step 4:** Commit: `feat: big-screen scoreboard page with light shows`.
 
 ### Task 14: Deployment and docs
@@ -478,7 +479,7 @@ Layout:
 - [ ] **Step 1:** Rewrite `README.md`. Cover:
   - What the server does.
   - Local run (`dotnet run`, in-memory).
-  - Configuration keys: `accountEndpoint`, `accountKey`, `Storage:Provider`, `Event:FreezesAt`, `Event:AdminKey`.
-  - A pre-event checklist: set the freeze time, set the admin key, empty the Cosmos container, re-copy the harness art and `tree.js` after the pixel-art pass, and run the dry run.
+  - Configuration keys: `accountEndpoint`, `accountKey`, `Storage:Provider`.
+  - A pre-event checklist: empty the Cosmos container, re-copy the harness art and `tree.js` after the pixel-art pass, and run the dry run.
 - [ ] **Step 2:** Run `docker build -f WebAPI/Dockerfile .`, then start the container with `Storage__Provider=InMemory`. Run `curl localhost:8080/register/smoke`, fetch `1.1`, and submit `blank-16.png`. Expected: `correct` `0`, `points` `0`, no SkiaSharp native-load error.
 - [ ] **Step 3:** Commit: `docs: server readme, api contract, docker smoke`.
